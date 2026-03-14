@@ -7,5 +7,4 @@ Aplikasi berbasis web sederhana untuk memvisualisasikan bagan alir dampak dalam 
 2. Masukkan parameter dampak lingkungan yang ingin divisualisasikan.
 3. Gunakan hasilnya untuk memperjelas dokumen AMDAL Anda.
 
-## ⚖️ Lisensi
 Hak Cipta © 2026 oleh Arif Nurcahyanto.
