@@ -13,7 +13,4 @@ Aplikasi berbasis web sederhana untuk memvisualisasikan bagan alir dampak dalam 
 3. Gunakan hasilnya untuk memperjelas dokumen AMDAL Anda.
 
 ## ⚖️ Lisensi
-Hak Cipta © 2026 oleh Arif Nurcahyanto. 
-Seluruh hak cipta dilindungi undang-undang. Kode sumber aplikasi ini bersifat 
-privat/proprietary dan tidak diizinkan untuk dikloning atau disebarluaskan 
-tanpa izin resmi.
+Hak Cipta © 2026 oleh Arif Nurcahyanto.
