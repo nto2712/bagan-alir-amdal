@@ -494,7 +494,7 @@
         );
       }
 
-      /* ── ZOOM CONTROLS (FITUR BARU) ── */
+      /* ── ZOOM CONTROLS ── */
       .zoom-controls {
         position: fixed;
         top: 24px;
@@ -1198,6 +1198,39 @@
             >
               ↺ Reset
             </button>
+
+            <label
+              class="settings-label"
+              style="
+                margin-top: 15px;
+                border-top: 1px solid #e2e8f0;
+                padding-top: 15px;
+              "
+              >Legenda Kustom</label
+            >
+            <div style="display: flex; gap: 8px; margin-bottom: 8px">
+              <input
+                type="text"
+                id="custom-legend-input"
+                placeholder="Misal: DTPH = Dampak..."
+                style="flex: 1; margin-bottom: 0"
+              />
+              <button
+                onclick="addCustomLegend()"
+                style="
+                  background: #3b82f6;
+                  color: white;
+                  padding: 8px 12px;
+                  font-size: 0.85em;
+                "
+              >
+                + Tambah
+              </button>
+            </div>
+            <div
+              id="custom-legend-list"
+              style="display: flex; flex-direction: column; gap: 6px"
+            ></div>
           </div>
         </div>
       </div>
@@ -1304,6 +1337,8 @@
           >Dampak Kuintier</span
         >
         <span><span></span>Warna Panah = Aliran Dampak</span>
+
+        <span id="custom-legends-container" style="display: contents"></span>
       </div>
     </div>
 
@@ -1315,8 +1350,9 @@
       let nodePositions = {};
       let connData = {};
 
-      // Variabel Zoom
       let currentZoom = 1;
+      
+      let customLegends = [];
 
       function toggleSidebar() {
         document.querySelector(".sidebar").classList.toggle("minimized");
@@ -1335,6 +1371,54 @@
       };
       let nodeColors = JSON.parse(JSON.stringify(defaultNodeColors));
       let selectedOrder = [];
+
+      // ── FUNGSI LEGENDA KUSTOM ───────────────────────────────────────────
+      function addCustomLegend() {
+        const input = document.getElementById("custom-legend-input");
+        const val = input.value.trim();
+        if (val) {
+          customLegends.push(val);
+          input.value = "";
+          renderCustomLegendsUI();
+          renderCanvasLegends();
+        }
+      }
+
+      function removeCustomLegend(idx) {
+        customLegends.splice(idx, 1);
+        renderCustomLegendsUI();
+        renderCanvasLegends();
+      }
+
+      function renderCustomLegendsUI() {
+        const list = document.getElementById("custom-legend-list");
+        if (list) {
+          list.innerHTML = customLegends
+            .map(
+              (leg, i) => `
+                  <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; padding: 6px 10px; border-radius: 4px; font-size: 0.8em; color: #475569;">
+                      <span>${leg}</span>
+                      <button onclick="removeCustomLegend(${i})" style="background: #ef4444; color: white; border: none; border-radius: 4px; padding: 2px 6px; cursor: pointer; font-size: 10px; width: auto; height: auto;">✖</button>
+                  </div>
+              `,
+            )
+            .join("");
+        }
+      }
+
+      function renderCanvasLegends() {
+        const container = document.getElementById("custom-legends-container");
+        if (container) {
+          container.innerHTML = customLegends
+            .map(
+              (leg) => `
+                  <span style="margin-left: 2px;">${leg}</span>
+              `,
+            )
+            .join("");
+        }
+      }
+      // ────────────────────────────────────────────────────────────────────
 
       // ── WARNA GARIS DAMPAK ───────────────────────────────────────────────
       let traceColors = [];
@@ -1462,6 +1546,7 @@
         applyZoom();
       }
 
+      // Deteksi Scroll Mouse (Ctrl + Scroll)
       wrap.addEventListener(
         "wheel",
         (e) => {
@@ -1472,7 +1557,6 @@
         },
         { passive: false },
       );
-
       // ─────────────────────
 
       const nodeResizeObserver = window.ResizeObserver
@@ -1556,9 +1640,7 @@
 
         if (distEl) {
           let val = parseInt(distEl.value, 10) + delta;
-
           val = Math.max(0, Math.min(800, val));
-
           distEl.value = val;
           if (distVal) distVal.innerText = val;
 
@@ -1567,6 +1649,7 @@
           });
         }
       }
+
       function applyLabelOrient(el, pts, off) {
         const lpos = getMidLabelPos(pts);
         const ox = lpos.x + (off ? off.dx : 0),
@@ -1622,6 +1705,7 @@
             labelDist: document.getElementById("conf-label-dist").value,
             nodeColors: nodeColors,
             traceColors: traceColors,
+            customLegends: customLegends, // NEW: Simpan legenda kustom
           },
           data: state,
           positions: nodePositions,
@@ -1689,6 +1773,15 @@
               } else {
                 traceColors = [];
               }
+
+              // NEW: Load custom legends
+              if (d.settings.customLegends) {
+                customLegends = d.settings.customLegends;
+              } else {
+                customLegends = [];
+              }
+              renderCustomLegendsUI();
+              renderCanvasLegends();
             }
             if (d.data) {
               state = d.data;
@@ -1717,11 +1810,15 @@
         document.getElementById("project_title").value = "Proyek Baru";
         nodeColors = JSON.parse(JSON.stringify(defaultNodeColors));
         traceColors = [];
+        customLegends = []; // Reset legenda
+
         resetZoom();
         applyNodeColors();
         loadNodeColorPickers();
         renderTraceColorGrid();
         renderInputs();
+        renderCustomLegendsUI();
+        renderCanvasLegends();
         renderCanvas();
       }
 
@@ -1814,9 +1911,7 @@
           scrollY: 0,
           useCORS: true,
           logging: false,
-          // --- KODE TAMBAHAN UNTUK MENYEMBUNYIKAN UI ---
           ignoreElements: (element) => {
-            // Abaikan elemen zoom-controls dan tooltip hint saat export
             if (
               element.classList &&
               element.classList.contains("zoom-controls")
@@ -1828,10 +1923,8 @@
             }
             return false;
           },
-          // --------------------------------------------
         })
           .then((canvas) => {
-            // Restore keadaan semula
             wrap.setAttribute("style", originalStyle);
             wrap.scrollLeft = originalScrollLeft;
             wrap.scrollTop = originalScrollTop;
@@ -1839,7 +1932,6 @@
             btnPng.innerText = oldText;
             btnPng.disabled = false;
 
-            // Restore Zoom
             currentZoom = oldZoom;
             applyZoom();
 
@@ -1856,7 +1948,6 @@
             btnPng.innerText = oldText;
             btnPng.disabled = false;
 
-            // Restore Zoom
             currentZoom = oldZoom;
             applyZoom();
           });
@@ -2334,7 +2425,6 @@
           startY = ev.clientY,
           origOff = { ...connData[key].labelOffset };
         function onMove(e) {
-          // Sesuaikan offset dengan zoomLevel
           const newOff = {
             dx: origOff.dx + (e.clientX - startX) / currentZoom,
             dy: origOff.dy + (e.clientY - startY) / currentZoom,
@@ -2363,7 +2453,6 @@
         const distEl = document.getElementById("conf-label-dist");
         let distLeft = distEl ? parseFloat(distEl.value) : 28;
 
-        
         for (let i = pts.length - 1; i > 0; i--) {
           const p2 = pts[i];
           const p1 = pts[i - 1];
@@ -2379,7 +2468,6 @@
             distLeft -= len;
           }
         }
-
         return { x: pts[0].x, y: pts[0].y };
       }
 
@@ -2451,9 +2539,8 @@
         }
 
         isLasso = true;
-        const rect = inner.getBoundingClientRect(); 
+        const rect = inner.getBoundingClientRect();
 
-        // Kalkulasi posisi menyesuaikan zoomLevel
         lassoStart = {
           x: (e.clientX - rect.left) / currentZoom,
           y: (e.clientY - rect.top) / currentZoom,
@@ -2520,7 +2607,6 @@
           const orig = c.pts.map((p) => ({ ...p })),
             lastIdx = c.pts.length - 1;
           function onMove(ev) {
-            // Sesuaikan dengan currentZoom
             const dx = (ev.clientX - startX) / currentZoom,
               dy = (ev.clientY - startY) / currentZoom,
               pts = c.pts;
@@ -3077,6 +3163,10 @@
         loadNodeColorPickers();
         renderTraceColorGrid();
         renderInputs();
+
+        renderCustomLegendsUI();
+        renderCanvasLegends();
+
         setTimeout(() => {
           renderCanvas();
           setTimeout(rebuildAllPaths, 100);
