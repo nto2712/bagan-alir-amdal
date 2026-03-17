@@ -62,6 +62,41 @@
         flex-direction: column;
         z-index: 100;
         box-shadow: 4px 0 15px rgba(0, 0, 0, 0.03);
+        transition: margin-left 0.3s ease;
+        flex-shrink: 0;
+      }
+
+      .sidebar.minimized {
+        margin-left: -420px;
+      }
+
+      /* Tombol Toggle Sidebar */
+      #btn-toggle-sidebar {
+        position: fixed;
+        top: 15px;
+        left: 435px;
+        z-index: 2000;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        padding: 6px 12px;
+        cursor: pointer;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        font-size: 1.2em;
+        color: #334155;
+        transition:
+          left 0.3s ease,
+          background 0.2s,
+          border-color 0.2s;
+      }
+
+      #btn-toggle-sidebar:hover {
+        background: #f1f5f9;
+        border-color: #94a3b8;
+      }
+
+      .sidebar.minimized ~ #btn-toggle-sidebar {
+        left: 15px;
       }
 
       .scroll-area {
@@ -598,6 +633,11 @@
         font-size: 0.85em;
         font-weight: 600;
         color: #475569;
+        transition: left 0.3s ease;
+      }
+
+      .sidebar.minimized ~ #canvas-wrap .canvas-legend {
+        left: 50%;
       }
 
       .leg-box {
@@ -623,9 +663,15 @@
         z-index: 3000;
         opacity: 0;
         pointer-events: none;
-        transition: opacity 0.25s;
+        transition:
+          opacity 0.25s,
+          left 0.3s ease;
         white-space: nowrap;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      .sidebar.minimized ~ #canvas-wrap #hint {
+        left: 50%;
       }
 
       #hint.show {
@@ -645,7 +691,8 @@
 
         .sidebar,
         #hint,
-        .controls {
+        .controls,
+        #btn-toggle-sidebar {
           display: none !important;
         }
 
@@ -985,6 +1032,14 @@
       </div>
     </div>
 
+    <button
+      id="btn-toggle-sidebar"
+      onclick="toggleSidebar()"
+      title="Sembunyikan/Tampilkan Sidebar"
+    >
+      ☰
+    </button>
+
     <div id="canvas-wrap" tabindex="0">
       <div id="hint">
         Drag segmen biru untuk mengatur jalur panah &nbsp;·&nbsp; Klik di luar
@@ -1054,6 +1109,14 @@
       let state = [];
       let nodePositions = {};
       let connData = {};
+
+      // Fungsi untuk meminimize/maximize sidebar
+      function toggleSidebar() {
+        const sidebar = document.querySelector(".sidebar");
+        sidebar.classList.toggle("minimized");
+        // Memaksa panah (connector) digambar ulang agar posisinya menyesuaikan kanvas yang melebar
+        setTimeout(rebuildAllPaths, 300);
+      }
 
       const defaultNodeColors = {
         t1: { bg: "#334155", bd: "#1e293b", c: "#ffffff" },
@@ -1789,7 +1852,14 @@
           g.appendChild(c);
         });
 
-        svgEl.appendChild(g);
+        // FIX: Sisipkan elemen panah baru tepat setelah <defs>.
+        const defs = svgEl.querySelector("defs");
+        if (defs && defs.nextSibling) {
+          svgEl.insertBefore(g, defs.nextSibling);
+        } else {
+          svgEl.appendChild(g);
+        }
+
         connectors[key] = {
           pts,
           group: g,
@@ -1808,21 +1878,25 @@
 
         hit.addEventListener("mousedown", (e) => {
           e.stopPropagation();
+          if (selectedConn && selectedConn !== key) return; // Mencegah pindah klik
           selectConn(key);
         });
         path.addEventListener("mousedown", (e) => {
           e.stopPropagation();
+          if (selectedConn && selectedConn !== key) return; // Mencegah pindah klik
           selectConn(key);
         });
         if (labelEl) {
           labelEl.addEventListener("mousedown", (e) => {
             e.stopPropagation();
+            if (selectedConn && selectedConn !== key) return; // Mencegah pindah klik
             selectConn(key);
             attachLabelDrag(e, key);
           });
           if (labelHandleEl)
             labelHandleEl.addEventListener("mousedown", (e) => {
               e.stopPropagation();
+              if (selectedConn && selectedConn !== key) return; // Mencegah pindah klik
               attachLabelDrag(e, key);
             });
         }
@@ -1879,7 +1953,18 @@
           .forEach((n) => (n.style.display = "block"));
         if (c.labelHandleEl) c.labelHandleEl.style.display = "block";
         hint.classList.add("show");
+
+        // FIX: Matikan interaksi mouse pada panah lain agar tidak bentrok
+        Object.keys(connectors).forEach((k) => {
+          if (k !== key) {
+            connectors[k].hitEl.style.pointerEvents = "none";
+            connectors[k].pathEl.style.pointerEvents = "none";
+            if (connectors[k].labelEl)
+              connectors[k].labelEl.style.pointerEvents = "none";
+          }
+        });
       }
+
       function deselectConn(key) {
         if (!key || !connectors[key]) return;
         const c = connectors[key];
@@ -1889,7 +1974,16 @@
           .querySelectorAll(".endpt")
           .forEach((n) => (n.style.display = "none"));
         if (c.labelHandleEl) c.labelHandleEl.style.display = "none";
+
+        // FIX: Kembalikan interaksi ke semua panah setelah dilepas
+        Object.keys(connectors).forEach((k) => {
+          connectors[k].hitEl.style.pointerEvents = "stroke";
+          connectors[k].pathEl.style.pointerEvents = "stroke";
+          if (connectors[k].labelEl)
+            connectors[k].labelEl.style.pointerEvents = "all";
+        });
       }
+
       function deselectAll() {
         if (selectedConn) {
           deselectConn(selectedConn);
