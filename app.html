@@ -1263,9 +1263,9 @@
 
     <div id="canvas-wrap" tabindex="0">
       <div class="zoom-controls">
-        <button onclick="changeZoom(-0.1)" title="Zoom Out">➖</button>
+        <button onclick="changeZoom(-0.05)" title="Zoom Out">➖</button>
         <span id="zoom-val">100%</span>
-        <button onclick="changeZoom(0.1)" title="Zoom In">➕</button>
+        <button onclick="changeZoom(0.05)" title="Zoom In">➕</button>
         <button
           onclick="resetZoom()"
           title="Reset Zoom"
@@ -1552,7 +1552,7 @@
         (e) => {
           if (e.ctrlKey || e.metaKey) {
             e.preventDefault();
-            changeZoom(e.deltaY < 0 ? 0.1 : -0.1);
+            changeZoom(e.deltaY < 0 ? 0.05 : -0.05);
           }
         },
         { passive: false },
