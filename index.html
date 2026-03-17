@@ -131,32 +131,66 @@
         justify-content: flex-end;
       }
 
-      /* Gunakan div sebagai placeholder ilustrasi jika gambar belum ada */
-      .hero-image-placeholder {
-        width: 90%;
-        height: 400px;
-        background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
-        border-radius: 20px;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-        position: relative;
-        overflow: hidden;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .hero-image-placeholder::after {
-        content: "📊 Ilustrasi Aplikasi";
-        color: var(--primary);
-        font-size: 1.5rem;
-        font-weight: 700;
-      }
-
       .hero-image img {
         max-width: 100%;
         height: auto;
         border-radius: 20px;
         box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        cursor: pointer;
+        transition: transform 0.3s ease;
+      }
+
+      .hero-image img:hover {
+        transform: scale(1.03);
+      }
+
+      /* Lightbox CSS */
+      .lightbox {
+        display: none;
+        position: fixed;
+        z-index: 9999;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.85);
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      .lightbox.show {
+        display: flex;
+        opacity: 1;
+      }
+
+      .lightbox-content {
+        max-width: 90%;
+        max-height: 90vh;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        transform: scale(0.95);
+        transition: transform 0.3s ease;
+      }
+
+      .lightbox.show .lightbox-content {
+        transform: scale(1);
+      }
+
+      .lightbox-close {
+        position: absolute;
+        top: 20px;
+        right: 35px;
+        color: #f1f1f1;
+        font-size: 40px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: color 0.2s ease;
+      }
+
+      .lightbox-close:hover {
+        color: var(--primary);
       }
 
       /* Features Section */
@@ -283,7 +317,7 @@
           width: 100%;
         }
         nav {
-          display: none; /* Hide nav on mobile for simplicity */
+          display: none;
         }
       }
     </style>
@@ -324,7 +358,11 @@
         </a>
       </div>
       <div class="hero-image">
-        <img src="assets/img/hero-img.png" alt="Ilustrasi Aplikasi AMDAL" />
+        <img
+          id="heroImg"
+          src="assets/img/hero-img.png"
+          alt="Ilustrasi Aplikasi AMDAL"
+        />
       </div>
     </section>
 
@@ -391,10 +429,45 @@
       </div>
     </section>
 
+    <div id="imageLightbox" class="lightbox">
+      <span class="lightbox-close">&times;</span>
+      <img
+        class="lightbox-content"
+        id="lightboxImg"
+        src=""
+        alt="Popup Ilustrasi"
+      />
+    </div>
+
     <footer>
       <p>
         &copy; 2026 Aplikasi Bagan Alir Dampak (AMDAL). All rights reserved.
       </p>
     </footer>
+
+    <script>
+      const heroImg = document.getElementById("heroImg");
+      const lightbox = document.getElementById("imageLightbox");
+      const lightboxImg = document.getElementById("lightboxImg");
+      const closeBtn = document.querySelector(".lightbox-close");
+
+      // Tampilkan popup saat gambar diklik
+      heroImg.addEventListener("click", function () {
+        lightbox.classList.add("show");
+        lightboxImg.src = this.src; // Menyalin path gambar
+      });
+
+      // Tutup popup saat tombol silang (X) diklik
+      closeBtn.addEventListener("click", function () {
+        lightbox.classList.remove("show");
+      });
+
+      // Tutup popup saat area gelap di luar gambar diklik
+      lightbox.addEventListener("click", function (e) {
+        if (e.target !== lightboxImg) {
+          lightbox.classList.remove("show");
+        }
+      });
+    </script>
   </body>
 </html>
