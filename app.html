@@ -469,7 +469,6 @@
         outline: none;
       }
 
-      /* Inner container yang akan menerima efek scale (zoom) */
       #canvas-inner {
         position: absolute;
         top: 0;
@@ -477,7 +476,6 @@
         width: 4000px;
         height: 4000px;
         transform-origin: 0 0;
-        /* Tambahkan transisi halus saat zoom button diklik */
         transition: transform 0.15s ease-out;
       }
 
@@ -1133,6 +1131,73 @@
               <option value="horizontal">Horizontal</option>
               <option value="vertical">Vertikal</option>
             </select>
+
+            <label
+              class="settings-label"
+              style="
+                margin-top: 15px;
+                border-top: 1px solid #e2e8f0;
+                padding-top: 15px;
+              "
+              >Posisi Label</label
+            >
+            <div style="display: flex; align-items: center; gap: 6px">
+              <button
+                onclick="adjustLabelDist(-1)"
+                style="
+                  padding: 2px 6px;
+                  font-size: 12px;
+                  min-width: 28px;
+                  background: #e2e8f0;
+                  color: #334155;
+                "
+                title="Geser Kiri (Kurangi 1px)"
+              >
+                ◀
+              </button>
+
+              <input
+                type="range"
+                id="conf-label-dist"
+                min="0"
+                max="800"
+                step="1"
+                value="28"
+                style="flex: 1; margin-bottom: 0; cursor: pointer"
+              />
+
+              <button
+                onclick="adjustLabelDist(1)"
+                style="
+                  padding: 2px 6px;
+                  font-size: 12px;
+                  min-width: 28px;
+                  background: #e2e8f0;
+                  color: #334155;
+                "
+                title="Geser Kanan (Tambah 1px)"
+              >
+                ▶
+              </button>
+
+              <span
+                id="label-dist-val"
+                style="
+                  font-size: 0.85em;
+                  font-weight: bold;
+                  width: 30px;
+                  text-align: right;
+                "
+                >28</span
+              >
+            </div>
+            <button
+              class="btn-reset-trace"
+              onclick="resetLabelPositions()"
+              style="margin-top: 8px"
+            >
+              ↺ Reset
+            </button>
           </div>
         </div>
       </div>
@@ -1370,7 +1435,7 @@
       }
 
       const wrap = document.getElementById("canvas-wrap");
-      const inner = document.getElementById("canvas-inner"); // Referensi inner
+      const inner = document.getElementById("canvas-inner");
       const svgEl = document.getElementById("svg-layer");
       const hint = document.getElementById("hint");
       const bgIn = document.getElementById("conf-bg");
@@ -1397,7 +1462,6 @@
         applyZoom();
       }
 
-      // Deteksi Scroll Mouse (Ctrl + Scroll)
       wrap.addEventListener(
         "wheel",
         (e) => {
@@ -1432,12 +1496,12 @@
       );
       bgIn.addEventListener(
         "input",
-        (e) => (inner.style.backgroundColor = e.target.value), // Apply bg to inner
+        (e) => (inner.style.backgroundColor = e.target.value),
       );
       patIn.addEventListener("change", (e) => setPattern(e.target.value));
 
       function setPattern(p) {
-        inner.classList.remove("bg-box", "bg-dot"); // Apply pattern to inner
+        inner.classList.remove("bg-box", "bg-dot");
         if (p === "box") inner.classList.add("bg-box");
         else if (p === "dot") inner.classList.add("bg-dot");
       }
@@ -1459,6 +1523,50 @@
         });
       });
 
+      const labelDistEl = document.getElementById("conf-label-dist");
+      const labelDistVal = document.getElementById("label-dist-val");
+      if (labelDistEl) {
+        labelDistEl.addEventListener("input", (e) => {
+          if (labelDistVal) labelDistVal.innerText = e.target.value;
+          Object.keys(connectors).forEach((key) => {
+            refreshConn(key);
+          });
+        });
+      }
+
+      function resetLabelPositions() {
+        const distEl = document.getElementById("conf-label-dist");
+        const distVal = document.getElementById("label-dist-val");
+        if (distEl) {
+          distEl.value = 28;
+          if (distVal) distVal.innerText = 28;
+        }
+
+        Object.keys(connectors).forEach((key) => {
+          if (connData[key]) {
+            connData[key].labelOffset = { dx: 0, dy: 0 };
+          }
+          refreshConn(key);
+        });
+      }
+
+      function adjustLabelDist(delta) {
+        const distEl = document.getElementById("conf-label-dist");
+        const distVal = document.getElementById("label-dist-val");
+
+        if (distEl) {
+          let val = parseInt(distEl.value, 10) + delta;
+
+          val = Math.max(0, Math.min(800, val));
+
+          distEl.value = val;
+          if (distVal) distVal.innerText = val;
+
+          Object.keys(connectors).forEach((key) => {
+            refreshConn(key);
+          });
+        }
+      }
       function applyLabelOrient(el, pts, off) {
         const lpos = getMidLabelPos(pts);
         const ox = lpos.x + (off ? off.dx : 0),
@@ -1511,6 +1619,7 @@
             bgPattern: patIn.value,
             fontFamily: fontIn.value,
             labelOrient: getLabelOrient(),
+            labelDist: document.getElementById("conf-label-dist").value,
             nodeColors: nodeColors,
             traceColors: traceColors,
           },
@@ -1557,6 +1666,16 @@
               }
               if (d.settings.labelOrient)
                 labelOrientEl.value = d.settings.labelOrient;
+
+              if (d.settings.labelDist !== undefined) {
+                const distEl = document.getElementById("conf-label-dist");
+                if (distEl) {
+                  distEl.value = d.settings.labelDist;
+                  const distVal = document.getElementById("label-dist-val");
+                  if (distVal) distVal.innerText = d.settings.labelDist;
+                }
+              }
+
               if (d.settings.nodeColors) {
                 nodeColors = d.settings.nodeColors;
                 applyNodeColors();
@@ -1598,7 +1717,7 @@
         document.getElementById("project_title").value = "Proyek Baru";
         nodeColors = JSON.parse(JSON.stringify(defaultNodeColors));
         traceColors = [];
-        resetZoom(); // Reset zoom jg
+        resetZoom();
         applyNodeColors();
         loadNodeColorPickers();
         renderTraceColorGrid();
@@ -1609,7 +1728,6 @@
       function exportPNG() {
         deselectAll();
 
-        // Simpan state zoom dan kembalikan ke 1 sementara untuk export
         const oldZoom = currentZoom;
         currentZoom = 1;
         applyZoom();
@@ -1638,7 +1756,6 @@
         const legendEl = document.querySelector(".canvas-legend");
         const originalLegendCSS = legendEl.style.cssText;
 
-        // Setel ke 1 baris sementara secara tidak terlihat untuk mengukur lebar idealnya
         legendEl.style.cssText =
           originalLegendCSS +
           "; position:absolute !important; display:flex !important; flex-wrap:nowrap !important; white-space:nowrap !important; width:max-content !important; height:min-content !important; align-items:center !important; justify-content:center !important; padding:10px 20px !important; visibility:hidden !important;";
@@ -1648,22 +1765,17 @@
         let legendStyle = "";
 
         if (chartWidth >= idealLegendWidth) {
-          // Bila lebar bagan > lebar legenda 1 baris, biarkan memanjang secara natural
           legendStyle =
             "; position:absolute !important; display:flex !important; flex-wrap:nowrap !important; white-space:nowrap !important; width:max-content !important; height:min-content !important; align-items:center !important; justify-content:center !important; padding:10px 20px !important;";
         } else {
-          // Bila lebar bagan < lebar legenda 1 baris, kurangi width legenda agar isinya turun/membungkus
           legendStyle = `; position:absolute !important; display:flex !important; flex-wrap:wrap !important; white-space:normal !important; width:${chartWidth - 40}px !important; height:min-content !important; align-items:center !important; justify-content:center !important; padding:10px 20px !important; text-align:center !important;`;
         }
 
-        // Terapkan properti yang telah dihitung (hilangkan visibility hidden)
         legendEl.style.cssText = originalLegendCSS + legendStyle;
 
-        // Hitung tinggi keseluruhan setelah menyesuaikan lebar legend (karena tinggi legend bisa lebih dari 1 baris)
         const legendHeight = legendEl.offsetHeight;
         const finalHeight = maxY + 50 + legendHeight + 50;
 
-        // Atur posisi legend tepat di bawah elemen bagan terendah
         legendEl.style.top = maxY + 50 + "px";
         legendEl.style.left = chartCenter + "px";
         legendEl.style.transform = "translateX(-50%)";
@@ -2247,13 +2359,28 @@
 
       function getMidLabelPos(pts) {
         if (!pts || pts.length < 2) return { x: 0, y: 0 };
-        const pL = pts[pts.length - 1],
-          pP = pts[pts.length - 2];
-        const dx = pL.x - pP.x,
-          dy = pL.y - pP.y,
-          len = Math.sqrt(dx * dx + dy * dy);
-        const t = len === 0 ? 0 : (len - Math.min(28, len / 2)) / len;
-        return { x: pP.x + dx * t, y: pP.y + dy * t };
+
+        const distEl = document.getElementById("conf-label-dist");
+        let distLeft = distEl ? parseFloat(distEl.value) : 28;
+
+        
+        for (let i = pts.length - 1; i > 0; i--) {
+          const p2 = pts[i];
+          const p1 = pts[i - 1];
+
+          const dx = p1.x - p2.x;
+          const dy = p1.y - p2.y;
+          const len = Math.sqrt(dx * dx + dy * dy);
+
+          if (distLeft <= len) {
+            const t = len === 0 ? 0 : distLeft / len;
+            return { x: p2.x + dx * t, y: p2.y + dy * t };
+          } else {
+            distLeft -= len;
+          }
+        }
+
+        return { x: pts[0].x, y: pts[0].y };
       }
 
       function selectConn(key) {
@@ -2314,7 +2441,6 @@
       let lassoStart = { x: 0, y: 0 };
 
       wrap.addEventListener("mousedown", (e) => {
-        // Hanya aktif jika klik langsung di wrap/inner/svg
         if (e.target !== wrap && e.target !== inner && e.target !== svgEl)
           return;
 
@@ -2325,7 +2451,7 @@
         }
 
         isLasso = true;
-        const rect = inner.getBoundingClientRect(); // Menggunakan rect dari inner yang sudah di-scale
+        const rect = inner.getBoundingClientRect(); 
 
         // Kalkulasi posisi menyesuaikan zoomLevel
         lassoStart = {
@@ -2598,7 +2724,7 @@
         if (p?.h) div.style.height = p.h + "px";
         if (!p) nodePositions[id] = { x: defX, y: defY, w: width, h: 44 };
         makeDraggable(div);
-        inner.appendChild(div); // Memasukkan ke inner (agar ikut terkena zoom)
+        inner.appendChild(div);
         nodeResizeObserver.observe(div);
         return div;
       }
@@ -2649,7 +2775,6 @@
 
       window.addEventListener("mousemove", (e) => {
         if (!isNodeDragging) return;
-        // Kalkulasi perpindahan mouse dibagi rasio zoom (agar tidak loncat-loncat/terlalu lambat/cepat saat dizoom)
         let dx = (e.clientX - dragStartX) / currentZoom,
           dy = (e.clientY - dragStartY) / currentZoom;
         if (e.shiftKey) {
