@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bagan Alir Dampak Lingkungan (AMDAL)</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary: #4f46e5;
+        --primary-hover: #4338ca;
+        --dark: #1e293b;
+        --text: #475569;
+        --bg-light: #f8fafc;
+        --white: #ffffff;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Segoe UI", Arial, sans-serif;
+      }
+
+      body {
+        background-color: var(--white);
+        color: var(--text);
+        line-height: 1.6;
+      }
+
+      /* Navbar */
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 8%;
+        background-color: var(--white);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+
+      .logo {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: var(--primary);
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .logo span {
+        color: var(--dark);
+      }
+
+      nav a {
+        text-decoration: none;
+        color: var(--text);
+        font-weight: 600;
+        margin-left: 30px;
+        transition: color 0.2s;
+      }
+
+      nav a:hover {
+        color: var(--primary);
+      }
+
+      /* Hero Section */
+      .hero {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 80px 8%;
+        background-color: var(--bg-light);
+        min-height: calc(100vh - 80px);
+      }
+
+      .hero-text {
+        flex: 1;
+        max-width: 550px;
+      }
+
+      .hero-text h1 {
+        font-size: 3.5rem;
+        line-height: 1.2;
+        color: var(--dark);
+        margin-bottom: 20px;
+        font-weight: 800;
+      }
+
+      .hero-text h1 span {
+        color: var(--primary);
+      }
+
+      .hero-text p {
+        font-size: 1.1rem;
+        margin-bottom: 40px;
+        color: var(--text);
+      }
+
+      .btn-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        background-color: var(--primary);
+        color: var(--white);
+        text-decoration: none;
+        padding: 16px 32px;
+        border-radius: 8px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
+      }
+
+      .btn-primary:hover {
+        background-color: var(--primary-hover);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4);
+      }
+
+      .hero-image {
+        flex: 1;
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      /* Gunakan div sebagai placeholder ilustrasi jika gambar belum ada */
+      .hero-image-placeholder {
+        width: 90%;
+        height: 400px;
+        background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+        border-radius: 20px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .hero-image-placeholder::after {
+        content: "📊 Ilustrasi Aplikasi";
+        color: var(--primary);
+        font-size: 1.5rem;
+        font-weight: 700;
+      }
+
+      .hero-image img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 20px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      }
+
+      /* Features Section */
+      .features {
+        padding: 100px 8%;
+        background-color: var(--white);
+        text-align: center;
+      }
+
+      .features h2 {
+        font-size: 2.5rem;
+        color: var(--dark);
+        margin-bottom: 60px;
+        font-weight: 800;
+      }
+
+      .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 40px;
+      }
+
+      .feature-card {
+        background-color: var(--bg-light);
+        padding: 40px 30px;
+        border-radius: 16px;
+        transition: transform 0.3s;
+        border: 1px solid #e2e8f0;
+      }
+
+      .feature-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+      }
+
+      .feature-icon {
+        font-size: 3rem;
+        margin-bottom: 20px;
+        display: inline-block;
+      }
+
+      .feature-card h3 {
+        font-size: 1.5rem;
+        color: var(--dark);
+        margin-bottom: 15px;
+      }
+
+      /* Footer */
+      footer {
+        background-color: var(--dark);
+        color: var(--white);
+        text-align: center;
+        padding: 30px 8%;
+      }
+
+      footer p {
+        opacity: 0.8;
+        font-size: 0.9rem;
+      }
+
+      /* Responsive Design */
+      @media (max-width: 968px) {
+        .hero {
+          flex-direction: column;
+          text-align: center;
+          padding-top: 60px;
+        }
+        .hero-text {
+          margin-bottom: 60px;
+        }
+        .hero-image {
+          justify-content: center;
+          width: 100%;
+        }
+        nav {
+          display: none; /* Hide nav on mobile for simplicity */
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <a href="#" class="logo"> BAGAN ALIR<span>AMDAL</span> </a>
+      <nav>
+        <a href="#beranda">Beranda</a>
+        <a href="#fitur">Fitur Unggulan</a>
+      </nav>
+    </header>
+
+    <section class="hero" id="beranda">
+      <div class="hero-text">
+        <h1>Visualisasikan <span>Dampak Lingkungan</span> dengan Mudah.</h1>
+        <p>
+          Aplikasi interaktif untuk membuat, mengedit, dan mengekspor bagan alir
+          dampak dalam dokumen AMDAL. Percepat proses penyusunan dokumen Anda
+          sekarang.
+        </p>
+        <a href="app.html" class="btn-primary">
+          Mulai Buat Bagan Alir
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </a>
+      </div>
+      <div class="hero-image">
+        <div class="hero-image-placeholder"></div>
+      </div>
+    </section>
+
+    <section class="features" id="fitur">
+      <h2>Fitur Unggulan</h2>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🖱️</div>
+          <h3>Drag & Drop Mudah</h3>
+          <p>
+            Atur tata letak setiap kotak dampak secara bebas. Geser, susun, dan
+            sejajarkan node dengan sangat presisi di dalam kanvas.
+          </p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📄</div>
+          <h3>Import Data Excel</h3>
+          <p>
+            Tidak perlu input manual satu per satu. Import data masif Anda
+            melalui template Excel (.xlsx) langsung menjadi bagan otomatis.
+          </p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📸</div>
+          <h3>Export HD</h3>
+          <p>
+            Unduh hasil akhir bagan alir dalam resolusi tinggi yang bersih dan
+            rapi, siap disisipkan langsung ke dalam laporan dokumen AMDAL.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <p>
+        &copy; 2026 Aplikasi Bagan Alir Dampak (AMDAL). All rights reserved.
+      </p>
+    </footer>
+  </body>
+</html>
