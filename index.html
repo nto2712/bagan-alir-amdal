@@ -75,7 +75,7 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 50px; /* Ini yang ditambahkan untuk memberi jarak pemisah */
+        gap: 50px;
         padding: 80px 8%;
         background-color: var(--bg-light);
         min-height: calc(100vh - 80px);
@@ -204,6 +204,57 @@
         margin-bottom: 15px;
       }
 
+      /* Contact Section */
+      .contact {
+        padding: 80px 8%;
+        background-color: var(--bg-light);
+        text-align: center;
+      }
+
+      .contact h2 {
+        font-size: 2.5rem;
+        color: var(--dark);
+        margin-bottom: 20px;
+        font-weight: 800;
+      }
+
+      .contact p {
+        color: var(--text);
+        margin-bottom: 40px;
+        font-size: 1.1rem;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .contact-links {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        flex-wrap: wrap;
+      }
+
+      .btn-outline {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 28px;
+        border: 2px solid var(--primary);
+        color: var(--primary);
+        text-decoration: none;
+        border-radius: 8px;
+        font-size: 1.05rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+      }
+
+      .btn-outline:hover {
+        background-color: var(--primary);
+        color: var(--white);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(79, 70, 229, 0.2);
+      }
+
       /* Footer */
       footer {
         background-color: var(--dark);
@@ -243,6 +294,7 @@
       <nav>
         <a href="#beranda">Beranda</a>
         <a href="#fitur">Fitur Unggulan</a>
+        <a href="#kontak">Kontak</a>
       </nav>
     </header>
 
@@ -303,6 +355,39 @@
             rapi, siap disisipkan langsung ke dalam laporan dokumen AMDAL.
           </p>
         </div>
+      </div>
+    </section>
+
+    <section class="contact" id="kontak">
+      <h2>Kontak</h2>
+      <p>
+        Punya saran fitur, menemukan bug, atau ingin berkontribusi pada
+        pengembangan aplikasi ini? Silakan kunjungi repositori GitHub di bawah
+        ini.
+      </p>
+      <div class="contact-links">
+        <a
+          href="https://github.com/nto2712"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="btn-outline"
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"
+            ></path>
+          </svg>
+          GitHub
+        </a>
       </div>
     </section>
 
