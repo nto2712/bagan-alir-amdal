@@ -460,6 +460,86 @@
         background: #e2e8f0;
       }
 
+      /* ── CANVAS & ZOOM ── */
+      #canvas-wrap {
+        flex: 1;
+        position: relative;
+        overflow: auto;
+        background: white;
+        outline: none;
+      }
+
+      /* Inner container yang akan menerima efek scale (zoom) */
+      #canvas-inner {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4000px;
+        height: 4000px;
+        transform-origin: 0 0;
+        /* Tambahkan transisi halus saat zoom button diklik */
+        transition: transform 0.15s ease-out;
+      }
+
+      #canvas-inner.bg-box {
+        background-size: 20px 20px;
+        background-image:
+          linear-gradient(to right, rgba(0, 0, 0, 0.08) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(0, 0, 0, 0.08) 1px, transparent 1px);
+      }
+
+      #canvas-inner.bg-dot {
+        background-size: 20px 20px;
+        background-image: radial-gradient(
+          rgba(0, 0, 0, 0.18) 1px,
+          transparent 1px
+        );
+      }
+
+      /* ── ZOOM CONTROLS (FITUR BARU) ── */
+      .zoom-controls {
+        position: fixed;
+        top: 24px;
+        right: 30px;
+        background: rgba(255, 255, 255, 0.95);
+        padding: 6px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        z-index: 2000;
+      }
+
+      .zoom-controls button {
+        background: #f8fafc;
+        color: #334155;
+        border: 1px solid #cbd5e1;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        font-size: 16px;
+      }
+
+      .zoom-controls button:hover {
+        background: #e2e8f0;
+        border-color: #94a3b8;
+      }
+
+      #zoom-val {
+        font-size: 0.85em;
+        font-weight: 700;
+        min-width: 50px;
+        text-align: center;
+        color: #475569;
+        user-select: none;
+      }
+
       /* ── LASSO SELECTION BOX ── */
       #lasso-box {
         position: absolute;
@@ -469,29 +549,6 @@
         pointer-events: none;
         display: none;
         z-index: 50;
-      }
-
-      #canvas-wrap {
-        flex: 1;
-        position: relative;
-        overflow: auto;
-        background: white;
-        outline: none;
-      }
-
-      #canvas-wrap.bg-box {
-        background-size: 20px 20px;
-        background-image:
-          linear-gradient(to right, rgba(0, 0, 0, 0.08) 1px, transparent 1px),
-          linear-gradient(to bottom, rgba(0, 0, 0, 0.08) 1px, transparent 1px);
-      }
-
-      #canvas-wrap.bg-dot {
-        background-size: 20px 20px;
-        background-image: radial-gradient(
-          rgba(0, 0, 0, 0.18) 1px,
-          transparent 1px
-        );
       }
 
       #svg-layer {
@@ -714,7 +771,8 @@
         .sidebar,
         #hint,
         .controls,
-        #btn-toggle-sidebar {
+        #btn-toggle-sidebar,
+        .zoom-controls {
           display: none !important;
         }
         #canvas-wrap {
@@ -725,8 +783,11 @@
           width: 100% !important;
           height: auto !important;
         }
-        #canvas-wrap.bg-box,
-        #canvas-wrap.bg-dot {
+        #canvas-inner {
+          transform: scale(1) !important;
+        }
+        #canvas-inner.bg-box,
+        #canvas-inner.bg-dot {
           background-image: none !important;
         }
         .canvas-legend {
@@ -1002,7 +1063,6 @@
               </div>
             </div>
 
-            <!-- ══ WARNA GARIS DAMPAK (FITUR BARU) ══ -->
             <label
               class="settings-label"
               style="
@@ -1025,9 +1085,7 @@
               berurutan. Klik warna untuk mengubah, lalu klik
               <b>Generate Bagan</b>.
             </p>
-            <div class="trace-color-grid" id="trace-color-grid">
-              <!-- diisi oleh JS -->
-            </div>
+            <div class="trace-color-grid" id="trace-color-grid"></div>
             <button class="btn-reset-trace" onclick="resetTraceColors()">
               ↺ Reset Warna Garis ke Default
             </button>
@@ -1106,12 +1164,30 @@
     </button>
 
     <div id="canvas-wrap" tabindex="0">
-      <div id="lasso-box"></div>
+      <div class="zoom-controls">
+        <button onclick="changeZoom(-0.1)" title="Zoom Out">➖</button>
+        <span id="zoom-val">100%</span>
+        <button onclick="changeZoom(0.1)" title="Zoom In">➕</button>
+        <button
+          onclick="resetZoom()"
+          title="Reset Zoom"
+          style="font-weight: bold"
+        >
+          ⟲
+        </button>
+      </div>
+
+      <div id="canvas-inner">
+        <div id="lasso-box"></div>
+        <svg id="svg-layer" xmlns="http://www.w3.org/2000/svg">
+          <defs></defs>
+        </svg>
+      </div>
+
       <div id="hint">
         Drag segmen biru untuk mengatur jalur panah &nbsp;·&nbsp; Klik di luar
         untuk deselect
       </div>
-      <svg id="svg-layer" xmlns="http://www.w3.org/2000/svg"><defs></defs></svg>
       <div class="canvas-legend">
         <span
           ><span
@@ -1174,6 +1250,9 @@
       let nodePositions = {};
       let connData = {};
 
+      // Variabel Zoom
+      let currentZoom = 1;
+
       function toggleSidebar() {
         document.querySelector(".sidebar").classList.toggle("minimized");
         setTimeout(rebuildAllPaths, 300);
@@ -1193,7 +1272,6 @@
       let selectedOrder = [];
 
       // ── WARNA GARIS DAMPAK ───────────────────────────────────────────────
-      // traceColors: panjangnya selalu = jumlah kegiatan, di-sync sebelum generate
       let traceColors = [];
 
       function countTotalKegiatan() {
@@ -1204,13 +1282,12 @@
         return Math.max(n, 1);
       }
 
-      // Hasilkan n warna berbeda yang tersebar merata di color wheel (HSL)
       function generateDistinctColors(n) {
         const colors = [];
         for (let i = 0; i < n; i++) {
           const h = Math.round((i * 360) / n);
-          const s = 72 + (i % 3) * 8; // 72–88%
-          const l = 44 + (i % 2) * 8; // 44–52%
+          const s = 72 + (i % 3) * 8;
+          const l = 44 + (i % 2) * 8;
           colors.push(hslToHex(h, s, l));
         }
         return colors;
@@ -1230,8 +1307,6 @@
         return "#" + toHex(f(0)) + toHex(f(8)) + toHex(f(4));
       }
 
-      // Sinkronkan panjang traceColors dengan jumlah kegiatan saat ini.
-      // Warna lama yang sudah dikustomisasi user dipertahankan per indeks.
       function syncTraceColors() {
         const n = countTotalKegiatan();
         const fresh = generateDistinctColors(n);
@@ -1240,11 +1315,8 @@
         for (let i = 0; i < n; i++) {
           traceColors.push(prev[i] !== undefined ? prev[i] : fresh[i]);
         }
-        // Jika jumlah kegiatan bertambah, semua warna baru di-generate ulang
-        // agar seluruh palet tetap tersebar merata (bukan hanya tambahan)
         if (prev.length !== n) {
           traceColors = generateDistinctColors(n);
-          // Tapi tetap pakai warna lama untuk indeks yang masih valid
           for (let i = 0; i < Math.min(prev.length, n); i++) {
             traceColors[i] = prev[i];
           }
@@ -1253,7 +1325,6 @@
 
       const getColor = (i) => traceColors[i % traceColors.length];
 
-      // Render kotak warna di sidebar — 4 kolom, jumlah sesuai kegiatan
       function renderTraceColorGrid() {
         const grid = document.getElementById("trace-color-grid");
         grid.innerHTML = "";
@@ -1288,7 +1359,7 @@
       }
 
       function resetTraceColors() {
-        traceColors = []; // kosongkan agar syncTraceColors generate ulang semua
+        traceColors = [];
         renderCanvas();
       }
       // ────────────────────────────────────────────────────────────────────
@@ -1299,11 +1370,46 @@
       }
 
       const wrap = document.getElementById("canvas-wrap");
+      const inner = document.getElementById("canvas-inner"); // Referensi inner
       const svgEl = document.getElementById("svg-layer");
       const hint = document.getElementById("hint");
       const bgIn = document.getElementById("conf-bg");
       const patIn = document.getElementById("conf-pat");
       const fontIn = document.getElementById("conf-font");
+
+      // ── ZOOM FUNCTIONS ──
+      const zoomValEl = document.getElementById("zoom-val");
+
+      function applyZoom() {
+        inner.style.transform = `scale(${currentZoom})`;
+        zoomValEl.innerText = Math.round(currentZoom * 100) + "%";
+      }
+
+      function changeZoom(delta) {
+        currentZoom += delta;
+        if (currentZoom < 0.2) currentZoom = 0.2;
+        if (currentZoom > 3) currentZoom = 3;
+        applyZoom();
+      }
+
+      function resetZoom() {
+        currentZoom = 1;
+        applyZoom();
+      }
+
+      // Deteksi Scroll Mouse (Ctrl + Scroll)
+      wrap.addEventListener(
+        "wheel",
+        (e) => {
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            changeZoom(e.deltaY < 0 ? 0.1 : -0.1);
+          }
+        },
+        { passive: false },
+      );
+
+      // ─────────────────────
 
       const nodeResizeObserver = window.ResizeObserver
         ? new ResizeObserver((entries) => {
@@ -1326,14 +1432,14 @@
       );
       bgIn.addEventListener(
         "input",
-        (e) => (wrap.style.backgroundColor = e.target.value),
+        (e) => (inner.style.backgroundColor = e.target.value), // Apply bg to inner
       );
       patIn.addEventListener("change", (e) => setPattern(e.target.value));
 
       function setPattern(p) {
-        wrap.classList.remove("bg-box", "bg-dot");
-        if (p === "box") wrap.classList.add("bg-box");
-        else if (p === "dot") wrap.classList.add("bg-dot");
+        inner.classList.remove("bg-box", "bg-dot"); // Apply pattern to inner
+        if (p === "box") inner.classList.add("bg-box");
+        else if (p === "dot") inner.classList.add("bg-dot");
       }
 
       const labelOrientEl = document.getElementById("conf-label-orient");
@@ -1406,7 +1512,7 @@
             fontFamily: fontIn.value,
             labelOrient: getLabelOrient(),
             nodeColors: nodeColors,
-            traceColors: traceColors, // ← simpan warna garis
+            traceColors: traceColors,
           },
           data: state,
           positions: nodePositions,
@@ -1439,7 +1545,7 @@
             if (d.settings) {
               if (d.settings.bgColor) {
                 bgIn.value = d.settings.bgColor;
-                wrap.style.backgroundColor = d.settings.bgColor;
+                inner.style.backgroundColor = d.settings.bgColor;
               }
               if (d.settings.bgPattern) {
                 patIn.value = d.settings.bgPattern;
@@ -1456,7 +1562,6 @@
                 applyNodeColors();
                 loadNodeColorPickers();
               }
-              // muat warna garis jika ada di file
               if (
                 Array.isArray(d.settings.traceColors) &&
                 d.settings.traceColors.length > 0
@@ -1493,6 +1598,7 @@
         document.getElementById("project_title").value = "Proyek Baru";
         nodeColors = JSON.parse(JSON.stringify(defaultNodeColors));
         traceColors = [];
+        resetZoom(); // Reset zoom jg
         applyNodeColors();
         loadNodeColorPickers();
         renderTraceColorGrid();
@@ -1502,6 +1608,12 @@
 
       function exportPNG() {
         deselectAll();
+
+        // Simpan state zoom dan kembalikan ke 1 sementara untuk export
+        const oldZoom = currentZoom;
+        currentZoom = 1;
+        applyZoom();
+
         let minX = Infinity,
           maxX = 0,
           maxY = 0;
@@ -1520,16 +1632,38 @@
           maxY = 600;
         }
 
-        const wrap = document.getElementById("canvas-wrap");
-        const legendEl = document.querySelector(".canvas-legend");
+        const chartWidth = Math.max(800, maxX + 100);
         const chartCenter = minX + (maxX - minX) / 2;
+
+        const legendEl = document.querySelector(".canvas-legend");
         const originalLegendCSS = legendEl.style.cssText;
+
+        // Setel ke 1 baris sementara secara tidak terlihat untuk mengukur lebar idealnya
         legendEl.style.cssText =
           originalLegendCSS +
-          "; position:absolute !important; display:flex !important; flex-wrap:nowrap !important; white-space:nowrap !important; width:max-content !important; height:min-content !important; align-items:center !important; padding:10px 20px !important;";
-        const legendRightEdge = chartCenter + legendEl.offsetWidth / 2;
-        const finalWidth = Math.max(maxX + 100, legendRightEdge + 100);
-        const finalHeight = maxY + 150;
+          "; position:absolute !important; display:flex !important; flex-wrap:nowrap !important; white-space:nowrap !important; width:max-content !important; height:min-content !important; align-items:center !important; justify-content:center !important; padding:10px 20px !important; visibility:hidden !important;";
+
+        const idealLegendWidth = legendEl.offsetWidth;
+        let finalWidth = chartWidth;
+        let legendStyle = "";
+
+        if (chartWidth >= idealLegendWidth) {
+          // Bila lebar bagan > lebar legenda 1 baris, biarkan memanjang secara natural
+          legendStyle =
+            "; position:absolute !important; display:flex !important; flex-wrap:nowrap !important; white-space:nowrap !important; width:max-content !important; height:min-content !important; align-items:center !important; justify-content:center !important; padding:10px 20px !important;";
+        } else {
+          // Bila lebar bagan < lebar legenda 1 baris, kurangi width legenda agar isinya turun/membungkus
+          legendStyle = `; position:absolute !important; display:flex !important; flex-wrap:wrap !important; white-space:normal !important; width:${chartWidth - 40}px !important; height:min-content !important; align-items:center !important; justify-content:center !important; padding:10px 20px !important; text-align:center !important;`;
+        }
+
+        // Terapkan properti yang telah dihitung (hilangkan visibility hidden)
+        legendEl.style.cssText = originalLegendCSS + legendStyle;
+
+        // Hitung tinggi keseluruhan setelah menyesuaikan lebar legend (karena tinggi legend bisa lebih dari 1 baris)
+        const legendHeight = legendEl.offsetHeight;
+        const finalHeight = maxY + 50 + legendHeight + 50;
+
+        // Atur posisi legend tepat di bawah elemen bagan terendah
         legendEl.style.top = maxY + 50 + "px";
         legendEl.style.left = chartCenter + "px";
         legendEl.style.transform = "translateX(-50%)";
@@ -1537,6 +1671,7 @@
         const originalStyle = wrap.getAttribute("style") || "";
         const originalScrollLeft = wrap.scrollLeft,
           originalScrollTop = wrap.scrollTop;
+
         wrap.style.position = "absolute";
         wrap.style.top = "0";
         wrap.style.left = "0";
@@ -1567,14 +1702,35 @@
           scrollY: 0,
           useCORS: true,
           logging: false,
+          // --- KODE TAMBAHAN UNTUK MENYEMBUNYIKAN UI ---
+          ignoreElements: (element) => {
+            // Abaikan elemen zoom-controls dan tooltip hint saat export
+            if (
+              element.classList &&
+              element.classList.contains("zoom-controls")
+            ) {
+              return true;
+            }
+            if (element.id === "hint") {
+              return true;
+            }
+            return false;
+          },
+          // --------------------------------------------
         })
           .then((canvas) => {
+            // Restore keadaan semula
             wrap.setAttribute("style", originalStyle);
             wrap.scrollLeft = originalScrollLeft;
             wrap.scrollTop = originalScrollTop;
             legendEl.style.cssText = originalLegendCSS;
             btnPng.innerText = oldText;
             btnPng.disabled = false;
+
+            // Restore Zoom
+            currentZoom = oldZoom;
+            applyZoom();
+
             const link = document.createElement("a");
             link.download = safeTitle + "_HD.png";
             link.href = canvas.toDataURL("image/png");
@@ -1587,6 +1743,10 @@
             legendEl.style.cssText = originalLegendCSS;
             btnPng.innerText = oldText;
             btnPng.disabled = false;
+
+            // Restore Zoom
+            currentZoom = oldZoom;
+            applyZoom();
           });
       }
 
@@ -2062,9 +2222,10 @@
           startY = ev.clientY,
           origOff = { ...connData[key].labelOffset };
         function onMove(e) {
+          // Sesuaikan offset dengan zoomLevel
           const newOff = {
-            dx: origOff.dx + (e.clientX - startX),
-            dy: origOff.dy + (e.clientY - startY),
+            dx: origOff.dx + (e.clientX - startX) / currentZoom,
+            dy: origOff.dy + (e.clientY - startY) / currentZoom,
           };
           connData[key].labelOffset = newOff;
           const lpos = getMidLabelPos(c.pts);
@@ -2153,8 +2314,9 @@
       let lassoStart = { x: 0, y: 0 };
 
       wrap.addEventListener("mousedown", (e) => {
-        // Hanya aktif jika klik langsung di wrap/svg (bukan node/connector)
-        if (e.target !== wrap && e.target !== svgEl) return;
+        // Hanya aktif jika klik langsung di wrap/inner/svg
+        if (e.target !== wrap && e.target !== inner && e.target !== svgEl)
+          return;
 
         deselectAll();
         if (selectedConn) {
@@ -2163,10 +2325,12 @@
         }
 
         isLasso = true;
-        const rect = wrap.getBoundingClientRect();
+        const rect = inner.getBoundingClientRect(); // Menggunakan rect dari inner yang sudah di-scale
+
+        // Kalkulasi posisi menyesuaikan zoomLevel
         lassoStart = {
-          x: e.clientX - rect.left + wrap.scrollLeft,
-          y: e.clientY - rect.top + wrap.scrollTop,
+          x: (e.clientX - rect.left) / currentZoom,
+          y: (e.clientY - rect.top) / currentZoom,
         };
 
         lassoBox.style.left = lassoStart.x + "px";
@@ -2181,9 +2345,9 @@
 
       window.addEventListener("mousemove", (e) => {
         if (!isLasso) return;
-        const rect = wrap.getBoundingClientRect();
-        const curX = e.clientX - rect.left + wrap.scrollLeft;
-        const curY = e.clientY - rect.top + wrap.scrollTop;
+        const rect = inner.getBoundingClientRect();
+        const curX = (e.clientX - rect.left) / currentZoom;
+        const curY = (e.clientY - rect.top) / currentZoom;
 
         const x = Math.min(lassoStart.x, curX);
         const y = Math.min(lassoStart.y, curY);
@@ -2195,7 +2359,6 @@
         lassoBox.style.width = w + "px";
         lassoBox.style.height = h + "px";
 
-        // Highlight node yang bersinggungan dengan lasso secara real-time
         document.querySelectorAll(".node").forEach((n) => {
           const nx = parseFloat(n.style.left) || 0;
           const ny = parseFloat(n.style.top) || 0;
@@ -2220,7 +2383,6 @@
         if (!isLasso) return;
         isLasso = false;
         lassoBox.style.display = "none";
-        // selectedOrder sudah terisi dari mousemove di atas
       });
 
       function attachSegDrag(hEl, key, sIdx, isH, isV) {
@@ -2232,8 +2394,9 @@
           const orig = c.pts.map((p) => ({ ...p })),
             lastIdx = c.pts.length - 1;
           function onMove(ev) {
-            const dx = ev.clientX - startX,
-              dy = ev.clientY - startY,
+            // Sesuaikan dengan currentZoom
+            const dx = (ev.clientX - startX) / currentZoom,
+              dy = (ev.clientY - startY) / currentZoom,
               pts = c.pts;
             if (isH) {
               const s = getAnchor(c.srcEl, "bottom", c.srcOffX),
@@ -2435,7 +2598,7 @@
         if (p?.h) div.style.height = p.h + "px";
         if (!p) nodePositions[id] = { x: defX, y: defY, w: width, h: 44 };
         makeDraggable(div);
-        wrap.appendChild(div);
+        inner.appendChild(div); // Memasukkan ke inner (agar ikut terkena zoom)
         nodeResizeObserver.observe(div);
         return div;
       }
@@ -2448,7 +2611,6 @@
               e.offsetY >= el.offsetHeight - 18)
           )
             return;
-          // Batalkan lasso jika user klik node
           isLasso = false;
           lassoBox.style.display = "none";
           if (e.ctrlKey || e.metaKey) {
@@ -2487,8 +2649,9 @@
 
       window.addEventListener("mousemove", (e) => {
         if (!isNodeDragging) return;
-        let dx = e.clientX - dragStartX,
-          dy = e.clientY - dragStartY;
+        // Kalkulasi perpindahan mouse dibagi rasio zoom (agar tidak loncat-loncat/terlalu lambat/cepat saat dizoom)
+        let dx = (e.clientX - dragStartX) / currentZoom,
+          dy = (e.clientY - dragStartY) / currentZoom;
         if (e.shiftKey) {
           Math.abs(dx) > Math.abs(dy) ? (dy = 0) : (dx = 0);
         }
@@ -2548,13 +2711,12 @@
         Array.from(svgEl.children).forEach((c) => {
           if (c.tagName !== "defs") c.remove();
         });
-        wrap.querySelectorAll(".node").forEach((n) => {
+        inner.querySelectorAll(".node").forEach((n) => {
           nodeResizeObserver.unobserve(n);
           n.remove();
         });
         Object.keys(connectors).forEach((k) => delete connectors[k]);
 
-        // ── Sync warna garis sesuai jumlah kegiatan saat ini ──
         syncTraceColors();
         renderTraceColorGrid();
 
@@ -2788,7 +2950,7 @@
         });
         applyNodeColors();
         loadNodeColorPickers();
-        renderTraceColorGrid(); // tampilkan pesan placeholder dulu
+        renderTraceColorGrid();
         renderInputs();
         setTimeout(() => {
           renderCanvas();
