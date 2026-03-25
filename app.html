@@ -5,6 +5,7 @@
     <title>Aplikasi Bagan Alir Dampak (Amdal)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
       :root {
         --kegiatan: #6366f1;
@@ -49,6 +50,7 @@
         color: #334155;
       }
 
+      /* ── SIDEBAR ── */
       .sidebar {
         width: 420px;
         background: white;
@@ -60,36 +62,34 @@
         transition: margin-left 0.3s ease;
         flex-shrink: 0;
       }
-
       .sidebar.minimized {
         margin-left: -420px;
       }
 
       #btn-toggle-sidebar {
-        position: fixed;
-        top: 15px;
-        left: 435px;
-        z-index: 2000;
-        background: #ffffff;
-        border: 1px solid #cbd5e1;
-        border-radius: 6px;
-        padding: 6px 12px;
+        background: transparent;
+        border: none;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         cursor: pointer;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-        font-size: 1.2em;
-        color: #334155;
+        font-size: 1.4em;
+        color: #475569;
+        margin-right: 8px;
         transition:
-          left 0.3s ease,
-          background 0.2s,
-          border-color 0.2s;
+          background-color 0.2s ease,
+          color 0.2s ease;
+        flex-shrink: 0;
       }
-
       #btn-toggle-sidebar:hover {
-        background: #f1f5f9;
-        border-color: #94a3b8;
+        background-color: #f1f5f9;
+        color: #0f172a;
       }
-      .sidebar.minimized ~ #btn-toggle-sidebar {
-        left: 15px;
+      #btn-toggle-sidebar:active {
+        background-color: #e2e8f0;
       }
 
       .scroll-area {
@@ -97,7 +97,6 @@
         overflow-y: auto;
         padding: 24px;
       }
-
       .scroll-area::-webkit-scrollbar {
         width: 6px;
       }
@@ -120,7 +119,6 @@
         font-weight: 800;
         letter-spacing: 0.5px;
       }
-
       .settings-section {
         margin-bottom: 20px;
       }
@@ -143,7 +141,6 @@
         letter-spacing: 0.5px;
         transition: all 0.2s ease;
       }
-
       .accordion-header:hover {
         background: #e2e8f0;
       }
@@ -156,13 +153,11 @@
       .accordion-header.collapsed::after {
         transform: rotate(-90deg);
       }
-
       .accordion-content {
         display: block;
         padding: 5px 2px 15px 2px;
         animation: fadeIn 0.3s ease-in-out;
       }
-
       .accordion-content.collapsed {
         display: none;
       }
@@ -199,7 +194,6 @@
         background: #fff;
         transition: all 0.2s;
       }
-
       input:focus,
       select:focus {
         outline: none;
@@ -219,7 +213,6 @@
         align-items: center;
         gap: 5px;
       }
-
       button:hover {
         opacity: 0.9;
         transform: translateY(-1px);
@@ -259,7 +252,6 @@
         margin-bottom: 20px;
         border: 1px dashed #7dd3fc;
       }
-
       .excel-import-box p {
         font-size: 0.8em;
         color: #0369a1;
@@ -276,7 +268,6 @@
         position: relative;
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
       }
-
       .t2-box {
         border-left: 4px solid var(--kegiatan);
         background: #f8fafc;
@@ -289,14 +280,12 @@
         border-right: 1px solid #e2e8f0;
         position: relative;
       }
-
       .impact-list {
         margin-top: 10px;
         display: flex;
         flex-direction: column;
         gap: 15px;
       }
-
       .impact-item {
         position: relative;
         background: #fff;
@@ -305,7 +294,6 @@
         padding: 12px 10px 10px 10px;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
       }
-
       .impact-row {
         display: flex;
         align-items: center;
@@ -323,7 +311,6 @@
         margin-bottom: 0;
         background: #f1f5f9;
       }
-
       .btn-add {
         width: 100%;
         padding: 12px;
@@ -332,7 +319,6 @@
         color: #334155;
         font-size: 0.9em;
       }
-
       .btn-del {
         position: absolute;
         top: 8px;
@@ -347,12 +333,10 @@
         line-height: 1;
         z-index: 2;
       }
-
       .btn-del:hover {
         background: #dc2626;
         transform: scale(1.1);
       }
-
       .btn-align {
         flex: 1 1 calc(33.33% - 5px);
         padding: 8px 5px;
@@ -363,7 +347,6 @@
         border-radius: 4px;
         margin-bottom: 2px;
       }
-
       .btn-align:hover {
         background: #e2e8f0;
         border-color: #94a3b8;
@@ -375,7 +358,6 @@
         background: #fff;
         box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.02);
       }
-
       .btn-gen {
         width: 100%;
         padding: 14px;
@@ -392,7 +374,6 @@
         color: white;
         font-size: 1em;
       }
-
       .hint-text {
         font-size: 0.75em;
         color: #64748b;
@@ -404,7 +385,7 @@
         color: #334155;
       }
 
-      /* ── WARNA GARIS DAMPAK ── */
+      /* ── WARNA GARIS ── */
       .trace-color-grid {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
@@ -415,14 +396,12 @@
         border: 1px solid #e2e8f0;
         margin-bottom: 8px;
       }
-
       .trace-color-item {
         display: flex;
         flex-direction: column;
         align-items: center;
         gap: 4px;
       }
-
       .trace-color-item label {
         font-size: 0.68em;
         color: #64748b;
@@ -430,7 +409,6 @@
         text-align: center;
         line-height: 1.2;
       }
-
       .trace-color-item input[type="color"] {
         width: 36px;
         height: 36px;
@@ -441,11 +419,9 @@
         margin-bottom: 0;
         transition: border-color 0.2s;
       }
-
       .trace-color-item input[type="color"]:hover {
         border-color: #94a3b8;
       }
-
       .btn-reset-trace {
         width: 100%;
         padding: 8px;
@@ -455,12 +431,77 @@
         font-size: 0.82em;
         margin-top: 0;
       }
-
       .btn-reset-trace:hover {
         background: #e2e8f0;
       }
 
-      /* ── CANVAS & ZOOM ── */
+      /* ════════════════════════════════════
+         AREA KANAN — TAB SYSTEM
+         ════════════════════════════════════ */
+      #main-right {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        position: relative;
+      }
+
+      /* Tab bar */
+      .tab-bar {
+        display: flex;
+        align-items: center;
+        background: #ffffff;
+        border-bottom: 2px solid #e2e8f0;
+        padding: 0 16px;
+        gap: 4px;
+        flex-shrink: 0;
+        z-index: 1500;
+        height: 48px;
+      }
+
+      .tab-btn {
+        padding: 10px 20px;
+        font-size: 0.88em;
+        font-weight: 600;
+        color: #64748b;
+        background: transparent;
+        border: none;
+        border-bottom: 3px solid transparent;
+        border-radius: 0;
+        cursor: pointer;
+        transition: all 0.18s;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        transform: none;
+        height: 100%;
+        margin-bottom: -2px;
+      }
+      .tab-btn:hover {
+        color: #334155;
+        background: #f8fafc;
+        transform: none;
+        opacity: 1;
+      }
+      .tab-btn.active {
+        color: #2563eb;
+        border-bottom-color: #2563eb;
+        background: transparent;
+      }
+
+      /* Tab panels */
+      .tab-panel {
+        display: none;
+        flex: 1;
+        overflow: hidden;
+      }
+      .tab-panel.active {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+      }
+
+      /* ── CANVAS PANEL ── */
       #canvas-wrap {
         flex: 1;
         position: relative;
@@ -485,7 +526,6 @@
           linear-gradient(to right, rgba(0, 0, 0, 0.08) 1px, transparent 1px),
           linear-gradient(to bottom, rgba(0, 0, 0, 0.08) 1px, transparent 1px);
       }
-
       #canvas-inner.bg-dot {
         background-size: 20px 20px;
         background-image: radial-gradient(
@@ -494,11 +534,10 @@
         );
       }
 
-      /* ── ZOOM CONTROLS ── */
       .zoom-controls {
-        position: fixed;
-        top: 24px;
-        right: 30px;
+        position: absolute;
+        bottom: 20px;
+        left: 20px;
         background: rgba(255, 255, 255, 0.95);
         padding: 6px;
         border: 1px solid #cbd5e1;
@@ -507,7 +546,36 @@
         display: flex;
         align-items: center;
         gap: 6px;
-        z-index: 2000;
+        z-index: 200;
+      }
+      .btn-export-float {
+        position: absolute;
+        bottom: 20px;
+        left: 210px;
+        background: #2563eb;
+        color: white;
+        padding: 10px 16px;
+        border-radius: 8px;
+        border: none;
+        font-weight: 600;
+        font-size: 1em;
+        width: 150px;
+        height: 47px;
+        justify-content: center;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+        z-index: 200;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .btn-export-float:hover {
+        background: #1d4ed8;
+        transform: translateY(-2px);
+      }
+      .btn-export-float:active {
+        transform: translateY(0);
       }
 
       .zoom-controls button {
@@ -517,18 +585,15 @@
         width: 32px;
         height: 32px;
         padding: 0;
-        display: flex;
         align-items: center;
         justify-content: center;
         border-radius: 6px;
         font-size: 16px;
       }
-
       .zoom-controls button:hover {
         background: #e2e8f0;
         border-color: #94a3b8;
       }
-
       #zoom-val {
         font-size: 0.85em;
         font-weight: 700;
@@ -538,7 +603,6 @@
         user-select: none;
       }
 
-      /* ── LASSO SELECTION BOX ── */
       #lasso-box {
         position: absolute;
         border: 2px dashed #3b82f6;
@@ -590,7 +654,6 @@
         cursor: crosshair;
         pointer-events: all;
       }
-
       .conn-label {
         font-size: 11px;
         font-weight: 700;
@@ -605,7 +668,6 @@
         text-anchor: middle;
         dominant-baseline: central;
       }
-
       .conn-label:active {
         cursor: grabbing;
       }
@@ -640,7 +702,6 @@
         resize: both;
         overflow: hidden;
       }
-
       .node::-webkit-resizer {
         background: transparent;
       }
@@ -693,33 +754,27 @@
       }
 
       .canvas-legend {
-        position: fixed;
-        bottom: 24px;
-        left: calc(420px + 50%);
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
         transform: translateX(-50%);
         background: rgba(255, 255, 255, 0.96);
         padding: 10px 20px;
         border: 1px solid #e2e8f0;
         border-radius: 30px;
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        z-index: 2000;
+        z-index: 200;
         display: flex;
         gap: 18px;
         align-items: center;
         flex-wrap: wrap;
         justify-content: center;
-        max-width: 90vw;
+        max-width: 90%;
         white-space: nowrap;
         font-size: 0.85em;
         font-weight: 600;
         color: #475569;
-        transition: left 0.3s ease;
       }
-
-      .sidebar.minimized ~ #canvas-wrap .canvas-legend {
-        left: 50%;
-      }
-
       .leg-box {
         width: 14px;
         height: 14px;
@@ -730,9 +785,9 @@
       }
 
       #hint {
-        position: fixed;
+        position: absolute;
         top: 12px;
-        left: calc(420px + 50%);
+        left: 50%;
         transform: translateX(-50%);
         background: #1e293b;
         color: white;
@@ -740,23 +795,233 @@
         font-weight: 500;
         padding: 6px 16px;
         border-radius: 20px;
-        z-index: 3000;
+        z-index: 300;
         opacity: 0;
         pointer-events: none;
-        transition:
-          opacity 0.25s,
-          left 0.3s ease;
+        transition: opacity 0.25s;
         white-space: nowrap;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      }
-
-      .sidebar.minimized ~ #canvas-wrap #hint {
-        left: 50%;
       }
       #hint.show {
         opacity: 1;
       }
 
+      /* ══════════════════════════════════════
+         TABEL RINGKASAN PANEL
+         ══════════════════════════════════════ */
+      #summary-panel {
+        flex: 1;
+        overflow-y: auto;
+        padding: 28px 32px;
+        background: #f8fafc;
+      }
+
+      #summary-panel::-webkit-scrollbar {
+        width: 7px;
+      }
+      #summary-panel::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      #summary-panel::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+      }
+
+      .summary-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+      }
+
+      .summary-header h2 {
+        font-size: 1.25em;
+        font-weight: 800;
+        color: #1e293b;
+        margin: 0;
+        letter-spacing: 0.3px;
+      }
+
+      .btn-refresh-summary {
+        background: #059669;
+        color: white;
+        padding: 9px 18px;
+        font-size: 0.85em;
+        border-radius: 7px;
+        border: none;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .summary-card {
+        background: white;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      }
+
+      .summary-card-title {
+        padding: 12px 16px;
+        font-size: 0.82em;
+        font-weight: 700;
+        color: #1e293b;
+        background: #f1f5f9;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+
+      /* Tabel di dalam card */
+      .sumtable {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.83em;
+      }
+
+      .sumtable th {
+        background: #f8fafc;
+        color: #64748b;
+        font-weight: 700;
+        font-size: 0.78em;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 9px 14px;
+        text-align: left;
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .sumtable th.num {
+        text-align: center;
+      }
+
+      .sumtable td {
+        padding: 9px 14px;
+        border-bottom: 1px solid #f1f5f9;
+        color: #334155;
+        vertical-align: middle;
+      }
+
+      .sumtable td.num {
+        text-align: center;
+        color: #64748b;
+        font-size: 0.9em;
+      }
+      .sumtable td.pct {
+        text-align: center;
+        color: #64748b;
+        font-size: 0.9em;
+      }
+
+      .sumtable tr:last-child td {
+        border-bottom: none;
+      }
+
+      /* Baris tertinggi */
+      .sumtable tr.top-row td {
+        background: #eff6ff;
+      }
+      .sumtable tr.top-row td.num,
+      .sumtable tr.top-row td.pct {
+        color: #64748b;
+      }
+
+      /* Baris total */
+      .sumtable tfoot td {
+        background: #f1f5f9;
+        font-weight: 700;
+        color: #1e293b;
+        border-top: 2px solid #e2e8f0;
+        padding: 10px 14px;
+      }
+      .sumtable tfoot td.num,
+      .sumtable tfoot td.pct {
+        color: #64748b;
+        font-weight: normal;
+      }
+
+      /* Ranking badge */
+      .rank-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        font-size: 0.72em;
+        font-weight: 800;
+        flex-shrink: 0;
+      }
+      .rank-1 {
+        background: #fef3c7;
+        color: #92400e;
+      }
+      .rank-2 {
+        background: #f1f5f9;
+        color: #475569;
+      }
+      .rank-3 {
+        background: #fef3c7;
+        color: #78350f;
+        opacity: 0.7;
+      }
+      .rank-n {
+        background: #f1f5f9;
+        color: #94a3b8;
+      }
+
+      /* ── TABEL 2 — LABEL ── */
+      .label-bar-wrap {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .label-bar-bg {
+        flex: 1;
+        height: 14px;
+        background: #f1f5f9;
+        border-radius: 20px;
+        overflow: hidden;
+      }
+
+      .label-bar-fill {
+        height: 100%;
+        border-radius: 20px;
+        transition: width 0.4s ease;
+      }
+
+      .label-pill {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 0.8em;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+      }
+
+      /* Empty state */
+      .empty-state {
+        padding: 40px;
+        text-align: center;
+        color: #94a3b8;
+        font-size: 0.9em;
+      }
+      .empty-state .empty-icon {
+        font-size: 2.5em;
+        margin-bottom: 10px;
+      }
+
+      /* Divider */
+      .summary-divider {
+        border: none;
+        border-top: 2px dashed #e2e8f0;
+        margin: 28px 0;
+      }
+
+      /* ── PRINT ── */
       @media print {
         * {
           -webkit-print-color-adjust: exact !important;
@@ -770,8 +1035,16 @@
         #hint,
         .controls,
         #btn-toggle-sidebar,
-        .zoom-controls {
+        .zoom-controls,
+        .tab-bar,
+        .btn-export-chart {
           display: none !important;
+        }
+        #main-right {
+          display: block !important;
+        }
+        .tab-panel {
+          display: block !important;
         }
         #canvas-wrap {
           position: absolute;
@@ -792,9 +1065,67 @@
           background: white !important;
           border: 1px solid #ccc !important;
           box-shadow: none !important;
-          display: flex !important;
-          flex-wrap: nowrap !important;
         }
+      }
+      /* ── SLICER & CHART UI ── */
+      .slicer-wrap {
+        background: white;
+        padding: 16px;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        margin-bottom: 24px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+      }
+      .slicer-title {
+        font-size: 0.9em;
+        font-weight: 800;
+        color: #1e293b;
+        margin-right: 5px;
+      }
+      .slicer-btn {
+        padding: 6px 14px;
+        border-radius: 20px;
+        border: 1px solid #cbd5e1;
+        background: #f8fafc;
+        color: #64748b;
+        font-size: 0.85em;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .slicer-btn:hover {
+        background: #e2e8f0;
+      }
+      .slicer-btn.active {
+        background: #3b82f6;
+        color: white;
+        border-color: #2563eb;
+        box-shadow: 0 2px 5px rgba(59, 130, 246, 0.3);
+      }
+      .chart-container {
+        position: relative;
+        height: 320px;
+        padding: 20px;
+        border-top: 1px dashed #cbd5e1;
+        background: #fafbfc;
+      }
+      .btn-export-chart {
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #cbd5e1;
+        padding: 6px 12px;
+        font-size: 0.8em;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background 0.2s;
+        font-weight: 600;
+      }
+      .btn-export-chart:hover {
+        background: #e2e8f0;
       }
     </style>
   </head>
@@ -856,11 +1187,10 @@
                 >Import via Excel</label
               >
               <p>
-                Format 12 Kolom dimulai dari sel A1 dengan nama kolom:
-                <b>Tahap</b>, <b>Kegiatan</b>, <b>Primer</b>, <b>Label_P</b>,
-                <b>Sekunder</b>, <b>Label_S</b>, <b>Tersier</b>, <b>Label_T</b>,
-                <b>Kuartier</b>, <b>Label_Q</b>, <b>Kuintier</b>,
-                <b>Label_Qi</b>
+                Format 12 Kolom: <b>Tahap</b>, <b>Kegiatan</b>, <b>Primer</b>,
+                <b>Label_P</b>, <b>Sekunder</b>, <b>Label_S</b>, <b>Tersier</b>,
+                <b>Label_T</b>, <b>Kuartier</b>, <b>Label_Q</b>,
+                <b>Kuintier</b>, <b>Label_Qi</b>
               </p>
               <p>Kolom Tahap dan Kegiatan tidak boleh kosong.</p>
               <p>Kolom label: DPH/DTPH/DTPHKP/-P/-TP/+P/+TP.</p>
@@ -945,7 +1275,6 @@
                 <option value="dot">Titik (Dot)</option>
               </select>
             </div>
-
             <label class="settings-label" style="margin-top: 0"
               >Pilih Huruf</label
             >
@@ -978,7 +1307,6 @@
               <option value="q">Dampak Kuartier</option>
               <option value="qi">Dampak Kuintier</option>
             </select>
-
             <div
               style="
                 display: flex;
@@ -1000,8 +1328,7 @@
                     margin-bottom: 4px;
                   "
                   >Background</label
-                >
-                <input
+                ><input
                   type="color"
                   id="col-bg"
                   oninput="updateNodeColors()"
@@ -1023,8 +1350,7 @@
                     margin-bottom: 4px;
                   "
                   >Border</label
-                >
-                <input
+                ><input
                   type="color"
                   id="col-bd"
                   oninput="updateNodeColors()"
@@ -1046,8 +1372,7 @@
                     margin-bottom: 4px;
                   "
                   >Teks</label
-                >
-                <input
+                ><input
                   type="color"
                   id="col-c"
                   oninput="updateNodeColors()"
@@ -1068,9 +1393,8 @@
                 border-top: 1px solid #e2e8f0;
                 padding-top: 15px;
               "
+              >Warna Garis Dampak</label
             >
-              Warna Garis Dampak
-            </label>
             <p
               style="
                 font-size: 0.75em;
@@ -1079,9 +1403,8 @@
                 line-height: 1.5;
               "
             >
-              Setiap warna mewakili satu aliran dampak kegiatan secara
-              berurutan. Klik warna untuk mengubah, lalu klik
-              <b>Generate Bagan</b>.
+              Setiap warna mewakili satu aliran kegiatan. Klik warna untuk
+              mengubah.
             </p>
             <div class="trace-color-grid" id="trace-color-grid"></div>
             <button class="btn-reset-trace" onclick="resetTraceColors()">
@@ -1151,11 +1474,10 @@
                   background: #e2e8f0;
                   color: #334155;
                 "
-                title="Geser Kiri (Kurangi 1px)"
+                title="Kurangi 1px"
               >
                 ◀
               </button>
-
               <input
                 type="range"
                 id="conf-label-dist"
@@ -1165,7 +1487,6 @@
                 value="28"
                 style="flex: 1; margin-bottom: 0; cursor: pointer"
               />
-
               <button
                 onclick="adjustLabelDist(1)"
                 style="
@@ -1175,11 +1496,10 @@
                   background: #e2e8f0;
                   color: #334155;
                 "
-                title="Geser Kanan (Tambah 1px)"
+                title="Tambah 1px"
               >
                 ▶
               </button>
-
               <span
                 id="label-dist-val"
                 style="
@@ -1236,109 +1556,159 @@
       </div>
 
       <div class="controls">
-        <button class="btn-gen" onclick="renderCanvas()">GENERATE BAGAN</button>
-        <button class="btn-pdf" onclick="exportPNG()">Export PNG (HD)</button>
+        <button class="btn-gen" onclick="renderCanvas()">GENERATE</button>
         <div class="hint-text">
           <b>Edit Bagan Alir:</b><br />
-          <b>Klik Kotak</b>: Pilih kotak &nbsp;|&nbsp; <b>Ctrl + Klik Kotak</b>:
+          <b>Klik Kotak</b>: Pilih &nbsp;|&nbsp; <b>Ctrl+Klik</b>:
           Multi-seleksi<br />
-          <b>Drag Kotak</b>: Geser Kotak &nbsp;|&nbsp;
-          <b>Shift + Drag Kotak</b>: Geser lurus<br />
-          <b>Klik Kotak + Keyboard Panah</b>: Geser Kotak<br />
-          <b>Drag Pojok Kanan Bawah Kotak</b>: Resize<br />
-          <b>Klik Panah</b>: Edit alur dan label panah<br />
-          <br />
-          <b>Copyright:</b> nto<br />
+          <b>Drag Kotak</b>: Geser &nbsp;|&nbsp; <b>Shift+Drag</b>: Geser
+          lurus<br />
+          <b>Drag di kanvas kosong</b>: Lasso seleksi<br />
+          <b>Keyboard Panah</b>: Geser kotak terpilih<br />
+          <b>Ctrl+Scroll</b>: Zoom in/out<br />
+          <b>Klik Panah</b>: Edit jalur & label<br /><br />
+          <b>Copyright:</b> nto
         </div>
       </div>
     </div>
 
-    <button
-      id="btn-toggle-sidebar"
-      onclick="toggleSidebar()"
-      title="Sembunyikan/Tampilkan Sidebar"
-    >
-      ☰
-    </button>
-
-    <div id="canvas-wrap" tabindex="0">
-      <div class="zoom-controls">
-        <button onclick="changeZoom(-0.05)" title="Zoom Out">➖</button>
-        <span id="zoom-val">100%</span>
-        <button onclick="changeZoom(0.05)" title="Zoom In">➕</button>
+    <div id="main-right">
+      <div class="tab-bar">
         <button
-          onclick="resetZoom()"
-          title="Reset Zoom"
-          style="font-weight: bold"
+          id="btn-toggle-sidebar"
+          onclick="toggleSidebar()"
+          title="Sembunyikan/Tampilkan Sidebar"
         >
-          ⟲
+          ☰
+        </button>
+
+        <button
+          class="tab-btn active"
+          id="tab-btn-canvas"
+          onclick="switchTab('canvas')"
+        >
+          🔀 Bagan Alir Dampak
+        </button>
+        <button
+          class="tab-btn"
+          id="tab-btn-summary"
+          onclick="switchTab('summary')"
+        >
+          📊 Rekapitulasi Dampak
         </button>
       </div>
 
-      <div id="canvas-inner">
-        <div id="lasso-box"></div>
-        <svg id="svg-layer" xmlns="http://www.w3.org/2000/svg">
-          <defs></defs>
-        </svg>
+      <div class="tab-panel active" id="tab-canvas">
+        <div id="canvas-wrap" tabindex="0">
+          <button class="btn-export-float" onclick="exportPNG()">
+            📥 Export PNG
+          </button>
+
+          <div class="zoom-controls">
+            <button onclick="changeZoom(-0.05)" title="Zoom Out">➖</button>
+            <span id="zoom-val">100%</span>
+            <button onclick="changeZoom(0.05)" title="Zoom In">➕</button>
+            <button
+              onclick="resetZoom()"
+              title="Reset Zoom"
+              style="font-weight: bold"
+            >
+              ⟲
+            </button>
+          </div>
+
+          <div id="canvas-inner">
+            <div id="lasso-box"></div>
+            <svg id="svg-layer" xmlns="http://www.w3.org/2000/svg">
+              <defs></defs>
+            </svg>
+          </div>
+
+          <div id="hint">
+            Drag segmen biru untuk mengatur jalur panah &nbsp;·&nbsp; Klik di
+            luar untuk deselect
+          </div>
+
+          <div class="canvas-legend">
+            <span
+              ><span
+                class="leg-box"
+                style="background: var(--bg-t1); border: 2px solid var(--bd-t1)"
+              ></span
+              >Tahap</span
+            >
+            <span
+              ><span
+                class="leg-box"
+                style="background: var(--bg-t2); border: 2px solid var(--bd-t2)"
+              ></span
+              >Kegiatan</span
+            >
+            <span
+              ><span
+                class="leg-box"
+                style="background: var(--bg-p); border: 2px solid var(--bd-p)"
+              ></span
+              >Dampak Primer</span
+            >
+            <span
+              ><span
+                class="leg-box"
+                style="background: var(--bg-s); border: 2px solid var(--bd-s)"
+              ></span
+              >Dampak Sekunder</span
+            >
+            <span
+              ><span
+                class="leg-box"
+                style="background: var(--bg-t); border: 2px solid var(--bd-t)"
+              ></span
+              >Dampak Tersier</span
+            >
+            <span id="leg-q" style="display: none"
+              ><span
+                class="leg-box"
+                style="background: var(--bg-q); border: 2px solid var(--bd-q)"
+              ></span
+              >Dampak Kuartier</span
+            >
+            <span id="leg-qi" style="display: none"
+              ><span
+                class="leg-box"
+                style="background: var(--bg-qi); border: 2px solid var(--bd-qi)"
+              ></span
+              >Dampak Kuintier</span
+            >
+            <span><span></span>Warna Panah = Aliran Dampak</span>
+            <span
+              id="custom-legends-container"
+              style="display: contents"
+            ></span>
+          </div>
+        </div>
       </div>
 
-      <div id="hint">
-        Drag segmen biru untuk mengatur jalur panah &nbsp;·&nbsp; Klik di luar
-        untuk deselect
-      </div>
-      <div class="canvas-legend">
-        <span
-          ><span
-            class="leg-box"
-            style="background: var(--bg-t1); border: 2px solid var(--bd-t1)"
-          ></span
-          >Tahap</span
-        >
-        <span
-          ><span
-            class="leg-box"
-            style="background: var(--bg-t2); border: 2px solid var(--bd-t2)"
-          ></span
-          >Kegiatan</span
-        >
-        <span
-          ><span
-            class="leg-box"
-            style="background: var(--bg-p); border: 2px solid var(--bd-p)"
-          ></span
-          >Dampak Primer</span
-        >
-        <span
-          ><span
-            class="leg-box"
-            style="background: var(--bg-s); border: 2px solid var(--bd-s)"
-          ></span
-          >Dampak Sekunder</span
-        >
-        <span
-          ><span
-            class="leg-box"
-            style="background: var(--bg-t); border: 2px solid var(--bd-t)"
-          ></span
-          >Dampak Tersier</span
-        >
-        <span id="leg-q" style="display: none"
-          ><span
-            class="leg-box"
-            style="background: var(--bg-q); border: 2px solid var(--bd-q)"
-          ></span
-          >Dampak Kuartier</span
-        >
-        <span id="leg-qi" style="display: none"
-          ><span
-            class="leg-box"
-            style="background: var(--bg-qi); border: 2px solid var(--bd-qi)"
-          ></span
-          >Dampak Kuintier</span
-        >
-        <span><span></span>Warna Panah = Aliran Dampak</span>
+      <div class="tab-panel" id="tab-summary">
+        <div id="summary-panel">
+          <div class="summary-header">
+            <h2>📊 Rekapitulasi Dampak</h2>
+            <div style="display: flex; align-items: center">
+              <button class="btn-refresh-summary" onclick="renderSummary()">
+                🔄 Perbarui
+              </button>
+            </div>
+          </div>
 
-        <span id="custom-legends-container" style="display: contents"></span>
+          <div id="summary-content">
+            <div class="empty-state">
+              <div class="empty-icon">📋</div>
+              <div>
+                Klik <b>Perbarui</b> atau <b>Generate Bagan</b> untuk
+                menampilkan ringkasan.
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1349,15 +1719,38 @@
       let state = [];
       let nodePositions = {};
       let connData = {};
-
       let currentZoom = 1;
-      
       let customLegends = [];
+
+      // Mengamankan input agar tidak merusak format HTML saat dirender
+      function escapeHtml(text) {
+        if (text === null || text === undefined) return "";
+        return String(text)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
 
       function toggleSidebar() {
         document.querySelector(".sidebar").classList.toggle("minimized");
         setTimeout(rebuildAllPaths, 300);
       }
+
+      // ── TAB SWITCHING ────────────────────────────────────────────────────
+      function switchTab(tabName) {
+        document
+          .querySelectorAll(".tab-panel")
+          .forEach((p) => p.classList.remove("active"));
+        document
+          .querySelectorAll(".tab-btn")
+          .forEach((b) => b.classList.remove("active"));
+        document.getElementById("tab-" + tabName).classList.add("active");
+        document.getElementById("tab-btn-" + tabName).classList.add("active");
+        if (tabName === "summary") renderSummary();
+      }
+      // ─────────────────────────────────────────────────────────────────────
 
       const defaultNodeColors = {
         t1: { bg: "#334155", bd: "#1e293b", c: "#ffffff" },
@@ -1372,7 +1765,7 @@
       let nodeColors = JSON.parse(JSON.stringify(defaultNodeColors));
       let selectedOrder = [];
 
-      // ── FUNGSI LEGENDA KUSTOM ───────────────────────────────────────────
+      // ── LEGENDA KUSTOM ───────────────────────────────────────────────────
       function addCustomLegend() {
         const input = document.getElementById("custom-legend-input");
         const val = input.value.trim();
@@ -1383,44 +1776,36 @@
           renderCanvasLegends();
         }
       }
-
       function removeCustomLegend(idx) {
         customLegends.splice(idx, 1);
         renderCustomLegendsUI();
         renderCanvasLegends();
       }
-
       function renderCustomLegendsUI() {
         const list = document.getElementById("custom-legend-list");
-        if (list) {
+        if (list)
           list.innerHTML = customLegends
             .map(
               (leg, i) => `
-                  <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; padding: 6px 10px; border-radius: 4px; font-size: 0.8em; color: #475569;">
-                      <span>${leg}</span>
-                      <button onclick="removeCustomLegend(${i})" style="background: #ef4444; color: white; border: none; border-radius: 4px; padding: 2px 6px; cursor: pointer; font-size: 10px; width: auto; height: auto;">✖</button>
-                  </div>
-              `,
+                <div style="display:flex;justify-content:space-between;align-items:center;background:#f8fafc;border:1px solid #e2e8f0;padding:6px 10px;border-radius:4px;font-size:0.8em;color:#475569;">
+                  <span>${escapeHtml(leg)}</span>
+                  <button onclick="removeCustomLegend(${i})" style="background:#ef4444;color:white;border:none;border-radius:4px;padding:2px 6px;cursor:pointer;font-size:10px;width:auto;height:auto;">✖</button>
+                </div>`,
             )
             .join("");
-        }
       }
-
       function renderCanvasLegends() {
         const container = document.getElementById("custom-legends-container");
-        if (container) {
+        if (container)
           container.innerHTML = customLegends
             .map(
-              (leg) => `
-                  <span style="margin-left: 2px;">${leg}</span>
-              `,
+              (leg) =>
+                `<span style="margin-left:2px">${escapeHtml(leg)}</span>`,
             )
             .join("");
-        }
       }
-      // ────────────────────────────────────────────────────────────────────
 
-      // ── WARNA GARIS DAMPAK ───────────────────────────────────────────────
+      // ── WARNA GARIS ─────────────────────────────────────────────────────
       let traceColors = [];
 
       function countTotalKegiatan() {
@@ -1429,17 +1814,6 @@
           n += t1.t2.length;
         });
         return Math.max(n, 1);
-      }
-
-      function generateDistinctColors(n) {
-        const colors = [];
-        for (let i = 0; i < n; i++) {
-          const h = Math.round((i * 360) / n);
-          const s = 72 + (i % 3) * 8;
-          const l = 44 + (i % 2) * 8;
-          colors.push(hslToHex(h, s, l));
-        }
-        return colors;
       }
 
       function hslToHex(h, s, l) {
@@ -1456,19 +1830,32 @@
         return "#" + toHex(f(0)) + toHex(f(8)) + toHex(f(4));
       }
 
+      function generateDistinctColors(n) {
+        if (n === 0) return [];
+        const lightTiers = [42, 65, 54];
+        const satTiers = [90, 78, 84];
+        const bits = Math.ceil(Math.log2(Math.max(n, 2)));
+        const total = Math.pow(2, bits);
+        function bitRev(i) {
+          let r = 0;
+          for (let b = 0; b < bits; b++) {
+            if (i & (1 << b)) r |= 1 << (bits - 1 - b);
+          }
+          return r;
+        }
+        return Array.from({ length: n }, (_, i) => {
+          const h = (bitRev(i) / total) * 360;
+          return hslToHex(Math.round(h), satTiers[i % 3], lightTiers[i % 3]);
+        });
+      }
+
       function syncTraceColors() {
         const n = countTotalKegiatan();
-        const fresh = generateDistinctColors(n);
         const prev = traceColors.slice();
-        traceColors = [];
-        for (let i = 0; i < n; i++) {
-          traceColors.push(prev[i] !== undefined ? prev[i] : fresh[i]);
-        }
         if (prev.length !== n) {
           traceColors = generateDistinctColors(n);
-          for (let i = 0; i < Math.min(prev.length, n); i++) {
+          for (let i = 0; i < Math.min(prev.length, n); i++)
             traceColors[i] = prev[i];
-          }
         }
       }
 
@@ -1484,10 +1871,7 @@
         traceColors.forEach((col, i) => {
           const item = document.createElement("div");
           item.className = "trace-color-item";
-          item.innerHTML = `
-            <input type="color" value="${col}" title="Kegiatan ${i + 1}"
-              onchange="updateTraceColor(${i}, this.value)" />
-            <label>Kegiatan ${i + 1}</label>`;
+          item.innerHTML = `<input type="color" value="${col}" title="Kegiatan ${i + 1}" onchange="updateTraceColor(${i}, this.value)" /><label>Kegiatan ${i + 1}</label>`;
           grid.appendChild(item);
         });
       }
@@ -1500,8 +1884,10 @@
           if (c.color === oldColor) {
             c.color = newColor;
             c.pathEl.setAttribute("stroke", newColor);
-            const markerId = ensureMarker(newColor);
-            c.pathEl.setAttribute("marker-end", `url(#${markerId})`);
+            c.pathEl.setAttribute(
+              "marker-end",
+              `url(#${ensureMarker(newColor)})`,
+            );
           }
         });
         rebuildAllPaths();
@@ -1511,7 +1897,6 @@
         traceColors = [];
         renderCanvas();
       }
-      // ────────────────────────────────────────────────────────────────────
 
       function toggleAccordion(headerEl) {
         headerEl.classList.toggle("collapsed");
@@ -1525,28 +1910,21 @@
       const bgIn = document.getElementById("conf-bg");
       const patIn = document.getElementById("conf-pat");
       const fontIn = document.getElementById("conf-font");
-
-      // ── ZOOM FUNCTIONS ──
       const zoomValEl = document.getElementById("zoom-val");
 
+      // ── ZOOM ────────────────────────────────────────────────────────────
       function applyZoom() {
         inner.style.transform = `scale(${currentZoom})`;
         zoomValEl.innerText = Math.round(currentZoom * 100) + "%";
       }
-
       function changeZoom(delta) {
-        currentZoom += delta;
-        if (currentZoom < 0.2) currentZoom = 0.2;
-        if (currentZoom > 3) currentZoom = 3;
+        currentZoom = Math.min(3, Math.max(0.2, currentZoom + delta));
         applyZoom();
       }
-
       function resetZoom() {
         currentZoom = 1;
         applyZoom();
       }
-
-      // Deteksi Scroll Mouse (Ctrl + Scroll)
       wrap.addEventListener(
         "wheel",
         (e) => {
@@ -1557,7 +1935,6 @@
         },
         { passive: false },
       );
-      // ─────────────────────
 
       const nodeResizeObserver = window.ResizeObserver
         ? new ResizeObserver((entries) => {
@@ -1594,7 +1971,6 @@
       function getLabelOrient() {
         return labelOrientEl ? labelOrientEl.value : "horizontal";
       }
-
       labelOrientEl.addEventListener("change", () => {
         Object.keys(connectors).forEach((key) => {
           const conn = connectors[key];
@@ -1602,57 +1978,49 @@
             applyLabelOrient(
               conn.labelEl,
               conn.pts,
-              connData[key] && connData[key].labelOffset,
+              connData[key]?.labelOffset,
             );
         });
       });
 
       const labelDistEl = document.getElementById("conf-label-dist");
       const labelDistVal = document.getElementById("label-dist-val");
-      if (labelDistEl) {
+      if (labelDistEl)
         labelDistEl.addEventListener("input", (e) => {
           if (labelDistVal) labelDistVal.innerText = e.target.value;
-          Object.keys(connectors).forEach((key) => {
-            refreshConn(key);
-          });
+          Object.keys(connectors).forEach((key) => refreshConn(key));
         });
-      }
 
       function resetLabelPositions() {
-        const distEl = document.getElementById("conf-label-dist");
-        const distVal = document.getElementById("label-dist-val");
+        const distEl = document.getElementById("conf-label-dist"),
+          distVal = document.getElementById("label-dist-val");
         if (distEl) {
           distEl.value = 28;
           if (distVal) distVal.innerText = 28;
         }
-
         Object.keys(connectors).forEach((key) => {
-          if (connData[key]) {
-            connData[key].labelOffset = { dx: 0, dy: 0 };
-          }
+          if (connData[key]) connData[key].labelOffset = { dx: 0, dy: 0 };
           refreshConn(key);
         });
       }
 
       function adjustLabelDist(delta) {
-        const distEl = document.getElementById("conf-label-dist");
-        const distVal = document.getElementById("label-dist-val");
-
+        const distEl = document.getElementById("conf-label-dist"),
+          distVal = document.getElementById("label-dist-val");
         if (distEl) {
-          let val = parseInt(distEl.value, 10) + delta;
-          val = Math.max(0, Math.min(800, val));
+          let val = Math.max(
+            0,
+            Math.min(800, parseInt(distEl.value, 10) + delta),
+          );
           distEl.value = val;
           if (distVal) distVal.innerText = val;
-
-          Object.keys(connectors).forEach((key) => {
-            refreshConn(key);
-          });
+          Object.keys(connectors).forEach((key) => refreshConn(key));
         }
       }
 
       function applyLabelOrient(el, pts, off) {
-        const lpos = getMidLabelPos(pts);
-        const ox = lpos.x + (off ? off.dx : 0),
+        const lpos = getMidLabelPos(pts),
+          ox = lpos.x + (off ? off.dx : 0),
           oy = lpos.y + (off ? off.dy : 0);
         if (getLabelOrient() === "vertical") {
           el.setAttribute(
@@ -1664,25 +2032,21 @@
         }
       }
 
-      // ════════════════════════════════════════════════════════════════════
-      //  COLOR CUSTOMIZATION (KOTAK)
-      // ════════════════════════════════════════════════════════════════════
+      // ── COLOR CUSTOMIZATION ─────────────────────────────────────────────
       function applyNodeColors() {
-        const rootStyle = document.documentElement.style;
+        const rs = document.documentElement.style;
         for (let key in nodeColors) {
-          rootStyle.setProperty(`--bg-${key}`, nodeColors[key].bg);
-          rootStyle.setProperty(`--bd-${key}`, nodeColors[key].bd);
-          rootStyle.setProperty(`--c-${key}`, nodeColors[key].c);
+          rs.setProperty(`--bg-${key}`, nodeColors[key].bg);
+          rs.setProperty(`--bd-${key}`, nodeColors[key].bd);
+          rs.setProperty(`--c-${key}`, nodeColors[key].c);
         }
       }
-
       function loadNodeColorPickers() {
         const type = document.getElementById("sel-node-type").value;
         document.getElementById("col-bg").value = nodeColors[type].bg;
         document.getElementById("col-bd").value = nodeColors[type].bd;
         document.getElementById("col-c").value = nodeColors[type].c;
       }
-
       function updateNodeColors() {
         const type = document.getElementById("sel-node-type").value;
         nodeColors[type].bg = document.getElementById("col-bg").value;
@@ -1691,9 +2055,7 @@
         applyNodeColors();
       }
 
-      // ════════════════════════════════════════════════════════════════════
-      //  SAVE / LOAD / EXPORT
-      // ════════════════════════════════════════════════════════════════════
+      // ── SAVE / LOAD / EXPORT ────────────────────────────────────────────
       function saveProject() {
         const d = {
           title: document.getElementById("project_title").value,
@@ -1703,19 +2065,18 @@
             fontFamily: fontIn.value,
             labelOrient: getLabelOrient(),
             labelDist: document.getElementById("conf-label-dist").value,
-            nodeColors: nodeColors,
-            traceColors: traceColors,
-            customLegends: customLegends, // NEW: Simpan legenda kustom
+            nodeColors,
+            traceColors,
+            customLegends,
           },
           data: state,
           positions: nodePositions,
           conns: connData,
         };
-        const s =
+        const a = document.createElement("a");
+        a.href =
           "data:text/json;charset=utf-8," +
           encodeURIComponent(JSON.stringify(d, null, 2));
-        const a = document.createElement("a");
-        a.href = s;
         a.download =
           (d.title.replace(/[^a-z0-9]/gi, "_").toLowerCase() || "amdal") +
           "_" +
@@ -1750,36 +2111,25 @@
               }
               if (d.settings.labelOrient)
                 labelOrientEl.value = d.settings.labelOrient;
-
               if (d.settings.labelDist !== undefined) {
-                const distEl = document.getElementById("conf-label-dist");
-                if (distEl) {
-                  distEl.value = d.settings.labelDist;
-                  const distVal = document.getElementById("label-dist-val");
-                  if (distVal) distVal.innerText = d.settings.labelDist;
+                const de = document.getElementById("conf-label-dist");
+                if (de) {
+                  de.value = d.settings.labelDist;
+                  const dv = document.getElementById("label-dist-val");
+                  if (dv) dv.innerText = d.settings.labelDist;
                 }
               }
-
               if (d.settings.nodeColors) {
                 nodeColors = d.settings.nodeColors;
                 applyNodeColors();
                 loadNodeColorPickers();
               }
-              if (
+              traceColors =
                 Array.isArray(d.settings.traceColors) &&
                 d.settings.traceColors.length > 0
-              ) {
-                traceColors = d.settings.traceColors;
-              } else {
-                traceColors = [];
-              }
-
-              // NEW: Load custom legends
-              if (d.settings.customLegends) {
-                customLegends = d.settings.customLegends;
-              } else {
-                customLegends = [];
-              }
+                  ? d.settings.traceColors
+                  : [];
+              customLegends = d.settings.customLegends || [];
               renderCustomLegendsUI();
               renderCanvasLegends();
             }
@@ -1810,8 +2160,7 @@
         document.getElementById("project_title").value = "Proyek Baru";
         nodeColors = JSON.parse(JSON.stringify(defaultNodeColors));
         traceColors = [];
-        customLegends = []; // Reset legenda
-
+        customLegends = [];
         resetZoom();
         applyNodeColors();
         loadNodeColorPickers();
@@ -1822,13 +2171,72 @@
         renderCanvas();
       }
 
+      // EXPORT FUNGSI CHART KHUSUS
+      // EXPORT FUNGSI CHART KHUSUS (DIUBAH MENJADI HD)
+      // EXPORT FUNGSI CHART KHUSUS (DIUBAH MENJADI HD - FIX)
+      // EXPORT FUNGSI CHART KHUSUS (DIUBAH MENJADI HD - MENGGUNAKAN HTML2CANVAS)
+      // EXPORT FUNGSI CHART KHUSUS (DIUBAH MENJADI NATIVE HD)
+      window.exportChartJS = function (canvasId, fileName) {
+        // Ambil instance Chart.js yang sedang aktif di canvas tersebut
+        const chart = Chart.getChart(canvasId);
+        if (!chart) return;
+
+        const btn = event ? event.target : null;
+        const oldText = btn ? btn.innerText : "";
+        if (btn) {
+          btn.innerText = "⏳ Memproses...";
+          btn.disabled = true;
+        }
+
+        // 1. Simpan konfigurasi resolusi & animasi asli
+        const originalRatio =
+          chart.options.devicePixelRatio || window.devicePixelRatio;
+        const originalAnimation = chart.options.animation;
+
+        // 2. Paksa Chart.js merender ulang dengan kerapatan pixel 3x lipat (HD) tanpa animasi
+        chart.options.devicePixelRatio = 3;
+        chart.options.animation = false;
+        chart.update();
+
+        // 3. Beri jeda sangat singkat agar proses render HD selesai
+        setTimeout(() => {
+          // Chart.js defaultnya berlatar transparan. Kita buat canvas sementara agar backgroundnya putih.
+          const tempCanvas = document.createElement("canvas");
+          tempCanvas.width = chart.canvas.width;
+          tempCanvas.height = chart.canvas.height;
+          const ctx = tempCanvas.getContext("2d");
+
+          // Isi dengan warna putih murni
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+
+          // Gambar grafik HD dari Chart.js ke atas background putih
+          ctx.drawImage(chart.canvas, 0, 0);
+
+          // Proses Download
+          const link = document.createElement("a");
+          link.download = fileName + "_HD.png";
+          link.href = tempCanvas.toDataURL("image/png", 1.0);
+          link.click();
+
+          // 4. Kembalikan ukuran dan animasi Chart ke kondisi semula agar UI tidak kacau
+          chart.options.devicePixelRatio = originalRatio;
+          chart.options.animation = originalAnimation;
+          chart.update();
+
+          // Kembalikan tombol
+          if (btn) {
+            btn.innerText = oldText;
+            btn.disabled = false;
+          }
+        }, 150);
+      };
+
       function exportPNG() {
         deselectAll();
-
         const oldZoom = currentZoom;
         currentZoom = 1;
         applyZoom();
-
         let minX = Infinity,
           maxX = 0,
           maxY = 0;
@@ -1846,95 +2254,68 @@
           maxX = 800;
           maxY = 600;
         }
-
         const chartWidth = Math.max(800, maxX + 100);
         const chartCenter = minX + (maxX - minX) / 2;
-
         const legendEl = document.querySelector(".canvas-legend");
         const originalLegendCSS = legendEl.style.cssText;
-
         legendEl.style.cssText =
           originalLegendCSS +
-          "; position:absolute !important; display:flex !important; flex-wrap:nowrap !important; white-space:nowrap !important; width:max-content !important; height:min-content !important; align-items:center !important; justify-content:center !important; padding:10px 20px !important; visibility:hidden !important;";
-
+          "; position:absolute !important; display:flex !important; flex-wrap:nowrap !important; white-space:nowrap !important; width:max-content !important; visibility:hidden !important;";
         const idealLegendWidth = legendEl.offsetWidth;
-        let finalWidth = chartWidth;
-        let legendStyle = "";
-
-        if (chartWidth >= idealLegendWidth) {
-          legendStyle =
-            "; position:absolute !important; display:flex !important; flex-wrap:nowrap !important; white-space:nowrap !important; width:max-content !important; height:min-content !important; align-items:center !important; justify-content:center !important; padding:10px 20px !important;";
-        } else {
-          legendStyle = `; position:absolute !important; display:flex !important; flex-wrap:wrap !important; white-space:normal !important; width:${chartWidth - 40}px !important; height:min-content !important; align-items:center !important; justify-content:center !important; padding:10px 20px !important; text-align:center !important;`;
-        }
-
+        let legendStyle =
+          chartWidth >= idealLegendWidth
+            ? "; position:absolute !important; display:flex !important; flex-wrap:nowrap !important; white-space:nowrap !important; width:max-content !important; align-items:center !important; justify-content:center !important; padding:10px 20px !important;"
+            : `; position:absolute !important; display:flex !important; flex-wrap:wrap !important; white-space:normal !important; width:${chartWidth - 40}px !important; align-items:center !important; justify-content:center !important; padding:10px 20px !important; text-align:center !important;`;
         legendEl.style.cssText = originalLegendCSS + legendStyle;
-
         const legendHeight = legendEl.offsetHeight;
         const finalHeight = maxY + 50 + legendHeight + 50;
-
         legendEl.style.top = maxY + 50 + "px";
         legendEl.style.left = chartCenter + "px";
         legendEl.style.transform = "translateX(-50%)";
-
         const originalStyle = wrap.getAttribute("style") || "";
-        const originalScrollLeft = wrap.scrollLeft,
-          originalScrollTop = wrap.scrollTop;
-
-        wrap.style.position = "absolute";
-        wrap.style.top = "0";
-        wrap.style.left = "0";
-        wrap.style.width = finalWidth + "px";
-        wrap.style.height = finalHeight + "px";
-        wrap.style.overflow = "visible";
-        wrap.style.zIndex = "9999";
-
+        const osl = wrap.scrollLeft,
+          ost = wrap.scrollTop;
+        wrap.style.cssText = `position:absolute;top:0;left:0;width:${chartWidth}px;height:${finalHeight}px;overflow:visible;z-index:9999`;
         const safeTitle =
           document
             .getElementById("project_title")
             .value.replace(/[^a-zA-Z0-9\s-]/g, "")
             .trim()
             .replace(/\s+/g, "_") || "Bagan_AMDAL";
-        const btnPng = document.querySelector(".btn-pdf");
+        const btnPng = document.querySelector(".btn-export-float");
         const oldText = btnPng.innerText;
         btnPng.innerText = "Memproses...";
         btnPng.disabled = true;
-
         html2canvas(wrap, {
           scale: 3,
           backgroundColor: bgIn.value,
-          width: finalWidth,
+          width: chartWidth,
           height: finalHeight,
-          windowWidth: finalWidth,
+          windowWidth: chartWidth,
           windowHeight: finalHeight,
           scrollX: 0,
           scrollY: 0,
           useCORS: true,
           logging: false,
-          ignoreElements: (element) => {
-            if (
-              element.classList &&
-              element.classList.contains("zoom-controls")
-            ) {
-              return true;
-            }
-            if (element.id === "hint") {
-              return true;
-            }
-            return false;
+          ignoreElements: (el) => {
+            if (!el || !el.classList) return el && el.id === "hint";
+            return (
+              el.classList.contains("zoom-controls") ||
+              el.classList.contains("btn-export-float") ||
+              el.id === "hint" ||
+              el.classList.contains("tab-bar")
+            );
           },
         })
           .then((canvas) => {
             wrap.setAttribute("style", originalStyle);
-            wrap.scrollLeft = originalScrollLeft;
-            wrap.scrollTop = originalScrollTop;
+            wrap.scrollLeft = osl;
+            wrap.scrollTop = ost;
             legendEl.style.cssText = originalLegendCSS;
             btnPng.innerText = oldText;
             btnPng.disabled = false;
-
             currentZoom = oldZoom;
             applyZoom();
-
             const link = document.createElement("a");
             link.download = safeTitle + "_HD.png";
             link.href = canvas.toDataURL("image/png");
@@ -1947,7 +2328,6 @@
             legendEl.style.cssText = originalLegendCSS;
             btnPng.innerText = oldText;
             btnPng.disabled = false;
-
             currentZoom = oldZoom;
             applyZoom();
           });
@@ -1980,32 +2360,32 @@
               t1Map = {},
               t2Map = {};
             rows.forEach((row, idx) => {
-              const tahapName = row["Tahap"]
+              const tn = row["Tahap"]
                 ? String(row["Tahap"]).trim()
                 : `Tahap Kosong (${idx + 1})`;
-              const kegiatanName = row["Kegiatan"]
+              const kn = row["Kegiatan"]
                 ? String(row["Kegiatan"]).trim()
                 : `Kegiatan Kosong (${idx + 1})`;
-              if (!t1Map[tahapName]) {
+              if (!t1Map[tn]) {
                 const newT1 = {
                   id: Date.now() + Math.random(),
-                  text: tahapName,
+                  text: tn,
                   t2: [],
                 };
                 newState.push(newT1);
-                t1Map[tahapName] = newT1;
-                t2Map[tahapName] = {};
+                t1Map[tn] = newT1;
+                t2Map[tn] = {};
               }
-              if (!t2Map[tahapName][kegiatanName]) {
+              if (!t2Map[tn][kn]) {
                 const newT2 = {
                   id: Date.now() + Math.random(),
-                  text: kegiatanName,
+                  text: kn,
                   impacts: [],
                 };
-                t1Map[tahapName].t2.push(newT2);
-                t2Map[tahapName][kegiatanName] = newT2;
+                t1Map[tn].t2.push(newT2);
+                t2Map[tn][kn] = newT2;
               }
-              t2Map[tahapName][kegiatanName].impacts.push({
+              t2Map[tn][kn].impacts.push({
                 id: Date.now() + Math.random(),
                 p: row["Primer"] || "",
                 l_p: row["Label_P"] || "",
@@ -2034,9 +2414,7 @@
         r.readAsArrayBuffer(f);
       }
 
-      // ════════════════════════════════════════════════════════════════════
-      //  FORM INPUTS
-      // ════════════════════════════════════════════════════════════════════
+      // ── FORM INPUTS ─────────────────────────────────────────────────────
       function addT1() {
         state.push({ id: Date.now(), text: "Tahap Baru", t2: [] });
         renderInputs();
@@ -2070,54 +2448,38 @@
         const c = document.getElementById("input-container");
         c.innerHTML = "";
         state.forEach((t1, t1i) => {
-          c.innerHTML += `
-        <div class="card">
-            <button class="btn-del" onclick="state.splice(${t1i},1);renderInputs()">×</button>
-            <label class="settings-label" style="color:#1e293b;margin-top:0;">Nama Tahap</label>
-            <input value="${t1.text}" oninput="state[${t1i}].text=this.value" style="font-weight:bold;font-size:1em;">
-            ${t1.t2
-              .map(
-                (t2, t2i) => `
-            <div class="t2-box">
-                <button class="btn-del" style="width:20px;height:20px;font-size:12px;top:12px;" onclick="state[${t1i}].t2.splice(${t2i},1);renderInputs()">×</button>
-                <label class="settings-label" style="margin-top:0;">Nama Kegiatan</label>
-                <input value="${t2.text}" oninput="state[${t1i}].t2[${t2i}].text=this.value" style="font-weight:600;">
-                <div class="impact-list">
-                ${t2.impacts
-                  .map(
-                    (imp, ii) => `
-                    <div class="impact-item">
-                        <button class="btn-del" style="width:18px;height:18px;font-size:10px;top:8px;right:8px;" onclick="state[${t1i}].t2[${t2i}].impacts.splice(${ii},1);renderInputs()">×</button>
-                        <div class="impact-row">
-                            <input class="val-input" placeholder="Dampak Primer" value="${imp.p || ""}" oninput="state[${t1i}].t2[${t2i}].impacts[${ii}].p=this.value">
-                            <input class="lbl-input" placeholder="Label" title="Contoh: -P atau +TP" value="${imp.l_p || ""}" oninput="state[${t1i}].t2[${t2i}].impacts[${ii}].l_p=this.value">
-                        </div>
-                        <div class="impact-row">
-                            <input class="val-input" placeholder="Dampak Sekunder" value="${imp.s || ""}" oninput="state[${t1i}].t2[${t2i}].impacts[${ii}].s=this.value">
-                            <input class="lbl-input" placeholder="Label" value="${imp.l_s || ""}" oninput="state[${t1i}].t2[${t2i}].impacts[${ii}].l_s=this.value">
-                        </div>
-                        <div class="impact-row">
-                            <input class="val-input" placeholder="Dampak Tersier" value="${imp.t || ""}" oninput="state[${t1i}].t2[${t2i}].impacts[${ii}].t=this.value">
-                            <input class="lbl-input" placeholder="Label" value="${imp.l_t || ""}" oninput="state[${t1i}].t2[${t2i}].impacts[${ii}].l_t=this.value">
-                        </div>
-                        <div class="impact-row">
-                            <input class="val-input" placeholder="Dampak Kuartier" value="${imp.q || ""}" oninput="state[${t1i}].t2[${t2i}].impacts[${ii}].q=this.value">
-                            <input class="lbl-input" placeholder="Label" value="${imp.l_q || ""}" oninput="state[${t1i}].t2[${t2i}].impacts[${ii}].l_q=this.value">
-                        </div>
-                        <div class="impact-row">
-                            <input class="val-input" placeholder="Dampak Kuintier" value="${imp.qi || ""}" oninput="state[${t1i}].t2[${t2i}].impacts[${ii}].qi=this.value">
-                            <input class="lbl-input" placeholder="Label" value="${imp.l_qi || ""}" oninput="state[${t1i}].t2[${t2i}].impacts[${ii}].l_qi=this.value">
-                        </div>
-                    </div>`,
-                  )
-                  .join("")}
-                </div>
-                <button class="btn-add" style="background:#e0e7ff;color:#4338ca;border:1px dashed #a5b4fc;" onclick="addImpact(${t1i},${t2i})">+ Tambah Dampak</button>
-            </div>`,
-              )
-              .join("")}
-            <button class="btn-add" style="border:1px dashed #cbd5e1;font-weight:600;" onclick="addT2(${t1i})">+ Tambah Kegiatan</button>
-        </div>`;
+          c.innerHTML += `<div class="card">
+                  <button class="btn-del" onclick="state.splice(${t1i},1);renderInputs()">×</button>
+                  <label class="settings-label" style="color:#1e293b;margin-top:0;">Nama Tahap</label>
+                  <input value="${escapeHtml(t1.text)}" oninput="state[${t1i}].text=this.value" style="font-weight:bold;font-size:1em;">
+                  ${t1.t2
+                    .map(
+                      (t2, t2i) => `
+                  <div class="t2-box">
+                      <button class="btn-del" style="width:20px;height:20px;font-size:12px;top:12px;" onclick="state[${t1i}].t2.splice(${t2i},1);renderInputs()">×</button>
+                      <label class="settings-label" style="margin-top:0;">Nama Kegiatan</label>
+                      <input value="${escapeHtml(t2.text)}" oninput="state[${t1i}].t2[${t2i}].text=this.value" style="font-weight:600;">
+                      <div class="impact-list">
+                      ${t2.impacts
+                        .map(
+                          (imp, ii) => `
+                          <div class="impact-item">
+                              <button class="btn-del" style="width:18px;height:18px;font-size:10px;top:8px;right:8px;" onclick="state[${t1i}].t2[${t2i}].impacts.splice(${ii},1);renderInputs()">×</button>
+                              <div class="impact-row"><input class="val-input" placeholder="Dampak Primer" value="${escapeHtml(imp.p)}" oninput="state[${t1i}].t2[${t2i}].impacts[${ii}].p=this.value"><input class="lbl-input" placeholder="Label" value="${escapeHtml(imp.l_p)}" oninput="state[${t1i}].t2[${t2i}].impacts[${ii}].l_p=this.value"></div>
+                              <div class="impact-row"><input class="val-input" placeholder="Dampak Sekunder" value="${escapeHtml(imp.s)}" oninput="state[${t1i}].t2[${t2i}].impacts[${ii}].s=this.value"><input class="lbl-input" placeholder="Label" value="${escapeHtml(imp.l_s)}" oninput="state[${t1i}].t2[${t2i}].impacts[${ii}].l_s=this.value"></div>
+                              <div class="impact-row"><input class="val-input" placeholder="Dampak Tersier" value="${escapeHtml(imp.t)}" oninput="state[${t1i}].t2[${t2i}].impacts[${ii}].t=this.value"><input class="lbl-input" placeholder="Label" value="${escapeHtml(imp.l_t)}" oninput="state[${t1i}].t2[${t2i}].impacts[${ii}].l_t=this.value"></div>
+                              <div class="impact-row"><input class="val-input" placeholder="Dampak Kuartier" value="${escapeHtml(imp.q)}" oninput="state[${t1i}].t2[${t2i}].impacts[${ii}].q=this.value"><input class="lbl-input" placeholder="Label" value="${escapeHtml(imp.l_q)}" oninput="state[${t1i}].t2[${t2i}].impacts[${ii}].l_q=this.value"></div>
+                              <div class="impact-row"><input class="val-input" placeholder="Dampak Kuintier" value="${escapeHtml(imp.qi)}" oninput="state[${t1i}].t2[${t2i}].impacts[${ii}].qi=this.value"><input class="lbl-input" placeholder="Label" value="${escapeHtml(imp.l_qi)}" oninput="state[${t1i}].t2[${t2i}].impacts[${ii}].l_qi=this.value"></div>
+                          </div>`,
+                        )
+                        .join("")}
+                      </div>
+                      <button class="btn-add" style="background:#e0e7ff;color:#4338ca;border:1px dashed #a5b4fc;" onclick="addImpact(${t1i},${t2i})">+ Tambah Dampak</button>
+                  </div>`,
+                    )
+                    .join("")}
+                  <button class="btn-add" style="border:1px dashed #cbd5e1;font-weight:600;" onclick="addT2(${t1i})">+ Tambah Kegiatan</button>
+                </div>`;
         });
       }
 
@@ -2129,6 +2491,689 @@
               .replace(/\s+/g, "_")
               .replace(/[^a-z0-9_]/g, "")
           : null;
+      }
+
+      // ════════════════════════════════════════════════════════════════════
+      //  TABEL RINGKASAN & CHART (DENGAN SLICER)
+      // ════════════════════════════════════════════════════════════════════
+      let activeTahapFilter = null;
+      let activeKegiatanFilter = null;
+      let activeLabelsFilter = null; // null = Tampilkan Semua
+      let chartInstances = []; // Menyimpan instance chart agar bisa di-destroy
+
+      // Palet warna otomatis untuk label-label lain (modern & high contrast)
+      const extendedChartColors = [
+        "#3b82f6", // Biru (Blue)
+        "#14b8a6", // Tosca (Teal)
+        "#ec4899", // Pink
+        "#06b6d4", // Cyan
+        "#6366f1", // Indigo
+        "#eab308", // Kuning Gelap (Yellow)
+        "#f43f5e", // Merah Muda Gelap (Rose)
+        "#84cc16", // Hijau Jeruk (Lime)
+        "#64748b", // Abu-abu Kebiruan (Slate)
+        "#d946ef", // Fuchsia
+      ];
+
+      function getLabelColorHex(lbl) {
+        const l = lbl.trim().toUpperCase();
+        if (l === "TANPA LABEL") return "#cbd5e1"; // Abu-abu netral (Slate 300)
+        // 1. Pemetaan Warna Spesifik Sesuai Request (Teori Warna Modern)
+        if (l === "+P") return "#22c55e"; // Hijau Cerah (Green 500)
+        if (l === "+TP") return "#86efac"; // Hijau Redup/Soft (Green 300)
+
+        if (l === "-P") return "#ef4444"; // Merah Cerah (Red 500)
+        if (l === "-TP") return "#fca5a5"; // Merah Redup/Soft (Red 300)
+
+        if (l === "DL") return "#8b5cf6"; // Ungu (Violet 500)
+
+        if (l === "DPH") return "#f97316"; // Orange 500 (Cerah & Kuat - Paling Krusial)
+        if (l === "DTPHKP") return "#fb923c"; // Orange 400 (Menengah - Tetap butuh Pantau/Kelola)
+        if (l === "DTPH") return "#fed7aa"; // Orange 200 (Sangat Soft/Redup - Paling tidak krusial)
+
+        // 2. Fallback untuk awalan + dan - (jika ada label dinamis seperti +Lainnya)
+        if (l.startsWith("+")) return "#10b981"; // Emerald
+        if (l.startsWith("-")) return "#f43f5e"; // Rose
+
+        // 3. Otomatisasi warna berbeda untuk label sisanya
+        let hash = 0;
+        for (let i = 0; i < l.length; i++) {
+          hash = l.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        return extendedChartColors[Math.abs(hash) % extendedChartColors.length];
+      }
+
+      function calcSummaryData() {
+        const byTahap = {};
+        const byKegiatan = {};
+        const byKomponen = {};
+        const byLabel = {};
+        const uniqueLabels = new Set();
+        const allAvailableLabels = new Set();
+        const allAvailableTahap = new Set();
+        const allAvailableKegiatan = new Set();
+
+        // 1. Kumpulkan semua opsi untuk tombol Slicer sebelum data difilter
+        state.forEach((t1) => {
+          const t1Text = t1.text || "Tahap Kosong";
+          allAvailableTahap.add(t1Text);
+          t1.t2.forEach((t2) => {
+            const t2Text = t2.text || "Kegiatan Kosong";
+            allAvailableKegiatan.add(t2Text);
+            t2.impacts.forEach((imp) => {
+              const pairs = [
+                { val: imp.p, lbl: imp.l_p },
+                { val: imp.s, lbl: imp.l_s },
+                { val: imp.t, lbl: imp.l_t },
+                { val: imp.q, lbl: imp.l_q },
+                { val: imp.qi, lbl: imp.l_qi },
+              ];
+              pairs.forEach(({ val, lbl }) => {
+                if (val && val.trim()) {
+                  const l =
+                    lbl && lbl.trim() !== "" ? lbl.trim() : "Tanpa Label";
+                  allAvailableLabels.add(l);
+                }
+              });
+            });
+          });
+        });
+
+        // 2. Kalkulasi Data Berdasarkan Filter yang Aktif
+        state.forEach((t1) => {
+          const t1Text = t1.text || "Tahap Kosong";
+          // FILTER TAHAP
+          if (activeTahapFilter !== null && !activeTahapFilter.includes(t1Text))
+            return;
+
+          if (!byTahap[t1Text]) byTahap[t1Text] = { total: 0, labels: {} };
+
+          t1.t2.forEach((t2) => {
+            const t2Text = t2.text || "Kegiatan Kosong";
+            // FILTER KEGIATAN
+            if (
+              activeKegiatanFilter !== null &&
+              !activeKegiatanFilter.includes(t2Text)
+            )
+              return;
+
+            const kKey = t2Text + "||" + t1Text;
+            if (!byKegiatan[kKey])
+              byKegiatan[kKey] = {
+                total: 0,
+                kegiatan: t2Text,
+                tahap: t1Text,
+                labels: {},
+              };
+
+            t2.impacts.forEach((imp) => {
+              const pairs = [
+                { val: imp.p, lbl: imp.l_p },
+                { val: imp.s, lbl: imp.l_s },
+                { val: imp.t, lbl: imp.l_t },
+                { val: imp.q, lbl: imp.l_q },
+                { val: imp.qi, lbl: imp.l_qi },
+              ];
+              pairs.forEach(({ val, lbl }) => {
+                if (val && val.trim()) {
+                  // Berikan default "Tanpa Label" jika lbl kosong
+                  const l =
+                    lbl && lbl.trim() !== "" ? lbl.trim() : "Tanpa Label";
+
+                  // FILTER LABEL
+                  if (
+                    activeLabelsFilter !== null &&
+                    !activeLabelsFilter.includes(l)
+                  ) {
+                    return;
+                  }
+
+                  byTahap[t1Text].total++;
+                  byKegiatan[kKey].total++;
+                  if (!byKomponen[val.trim()])
+                    byKomponen[val.trim()] = { total: 0, labels: {} };
+                  byKomponen[val.trim()].total++;
+
+                  uniqueLabels.add(l);
+                  byLabel[l] = (byLabel[l] || 0) + 1;
+                  byTahap[t1Text].labels[l] =
+                    (byTahap[t1Text].labels[l] || 0) + 1;
+                  byKegiatan[kKey].labels[l] =
+                    (byKegiatan[kKey].labels[l] || 0) + 1;
+                  byKomponen[val.trim()].labels[l] =
+                    (byKomponen[val.trim()].labels[l] || 0) + 1;
+                }
+              });
+            });
+          });
+        });
+
+        // Hierarki prioritas label sesuai aturan AMDAL
+        const labelPriority = [
+          "+P",
+          "-P",
+          "+TP",
+          "-TP",
+          "DL",
+          "DPH",
+          "DTPHKP",
+          "DTPH",
+          "TANPA LABEL",
+        ];
+
+        const compareLabels = (labelsA, labelsB) => {
+          for (const p of labelPriority) {
+            let countA = 0,
+              countB = 0;
+            for (const k in labelsA)
+              if (k.toUpperCase() === p) countA += labelsA[k];
+            for (const k in labelsB)
+              if (k.toUpperCase() === p) countB += labelsB[k];
+            if (countA !== countB) return countB - countA;
+          }
+          return 0;
+        };
+
+        const sortDesc = (obj) =>
+          Object.entries(obj)
+            .filter((x) => x[1].total > 0)
+            .sort((a, b) => {
+              if (b[1].total !== a[1].total) return b[1].total - a[1].total;
+              return compareLabels(a[1].labels, b[1].labels);
+            });
+
+        const sortDescObj = (arr) =>
+          arr
+            .filter((x) => x.total > 0)
+            .sort((a, b) => {
+              if (b.total !== a.total) return b.total - a.total;
+              return compareLabels(a.labels, b.labels);
+            });
+
+        const sortDescLabel = (obj) =>
+          Object.entries(obj).sort((a, b) => {
+            if (b[1] !== a[1]) return b[1] - a[1];
+            const rankA = labelPriority.indexOf(a[0].toUpperCase());
+            const rankB = labelPriority.indexOf(b[0].toUpperCase());
+            const rA = rankA === -1 ? 999 : rankA;
+            const rB = rankB === -1 ? 999 : rankB;
+            if (rA !== rB) return rA - rB;
+            return a[0].localeCompare(b[0]);
+          });
+
+        return {
+          tahap: sortDesc(byTahap),
+          kegiatan: sortDescObj(Object.values(byKegiatan)),
+          komponen: sortDesc(byKomponen),
+          label: sortDescLabel(byLabel),
+          uniqueLabels: Array.from(uniqueLabels).sort(),
+          allAvailableLabels: Array.from(allAvailableLabels).sort(),
+          allAvailableTahap: Array.from(allAvailableTahap),
+          allAvailableKegiatan: Array.from(allAvailableKegiatan),
+        };
+      }
+
+      window.toggleSlicer = function (lbl) {
+        if (activeLabelsFilter === null) {
+          activeLabelsFilter = [lbl];
+        } else {
+          if (activeLabelsFilter.includes(lbl)) {
+            activeLabelsFilter = activeLabelsFilter.filter((x) => x !== lbl);
+            if (activeLabelsFilter.length === 0) activeLabelsFilter = null;
+          } else {
+            activeLabelsFilter.push(lbl);
+          }
+        }
+        renderSummary();
+      };
+      window.resetSlicer = function () {
+        activeLabelsFilter = null;
+        renderSummary();
+      };
+
+      // FUNGSI SLICER TAHAP
+      window.toggleTahapSlicer = function (thp) {
+        if (activeTahapFilter === null) {
+          activeTahapFilter = [thp];
+        } else {
+          if (activeTahapFilter.includes(thp)) {
+            activeTahapFilter = activeTahapFilter.filter((x) => x !== thp);
+            if (activeTahapFilter.length === 0) activeTahapFilter = null;
+          } else {
+            activeTahapFilter.push(thp);
+          }
+        }
+        renderSummary();
+      };
+      window.resetTahapSlicer = function () {
+        activeTahapFilter = null;
+        renderSummary();
+      };
+
+      // FUNGSI SLICER KEGIATAN
+      window.toggleKegiatanSlicer = function (keg) {
+        if (activeKegiatanFilter === null) {
+          activeKegiatanFilter = [keg];
+        } else {
+          if (activeKegiatanFilter.includes(keg)) {
+            activeKegiatanFilter = activeKegiatanFilter.filter(
+              (x) => x !== keg,
+            );
+            if (activeKegiatanFilter.length === 0) activeKegiatanFilter = null;
+          } else {
+            activeKegiatanFilter.push(keg);
+          }
+        }
+        renderSummary();
+      };
+      window.resetKegiatanSlicer = function () {
+        activeKegiatanFilter = null;
+        renderSummary();
+      };
+
+      function createStackedBarChart(
+        canvasId,
+        labels,
+        datasetsData,
+        dataLabels,
+      ) {
+        const ctx = document.getElementById(canvasId).getContext("2d");
+        const datasets = dataLabels.map((l) => ({
+          label: l,
+          data: datasetsData.map((d) => d.labels[l] || 0),
+          backgroundColor: getLabelColorHex(l),
+          borderRadius: 3,
+        }));
+
+        // Plugin kustom untuk menampilkan Total di ujung atas bar
+        const topTotalPlugin = {
+          id: "topTotalPlugin",
+          afterDatasetsDraw(chart) {
+            const {
+              ctx,
+              data,
+              scales: { x, y },
+            } = chart;
+            ctx.save();
+            ctx.font = 'bold 11px "Segoe UI", Arial, sans-serif';
+            ctx.fillStyle = "#334155"; // Warna teks menyesuaikan tema
+            ctx.textAlign = "center";
+            ctx.textBaseline = "bottom";
+
+            // Hitung total nilai di setiap kategori (sumbu X)
+            const totals = new Array(data.labels.length).fill(0);
+            data.datasets.forEach((dataset, datasetIndex) => {
+              const meta = chart.getDatasetMeta(datasetIndex);
+              // Hanya hitung dataset yang tidak di-hide (diklik dari legend)
+              if (!meta.hidden) {
+                dataset.data.forEach((val, i) => {
+                  totals[i] += val || 0;
+                });
+              }
+            });
+
+            // Gambar teks total
+            totals.forEach((total, i) => {
+              if (total > 0) {
+                const xPos = x.getPixelForValue(i);
+                const yPos = y.getPixelForValue(total);
+                ctx.fillText(total, xPos, yPos - 4); // Geser 4px ke atas agar tidak menempel
+              }
+            });
+            ctx.restore();
+          },
+        };
+
+        chartInstances.push(
+          new Chart(ctx, {
+            type: "bar",
+            data: { labels, datasets },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              layout: {
+                padding: {
+                  top: 25, // Tambahkan padding atas agar teks angka tidak terpotong tepi canvas
+                },
+              },
+              interaction: { mode: "index", intersect: false },
+              plugins: {
+                tooltip: { enabled: true },
+                legend: {
+                  position: "bottom",
+                  labels: { usePointStyle: true, boxWidth: 8 },
+                },
+              },
+              scales: {
+                x: { stacked: true, grid: { display: false } },
+                y: {
+                  stacked: true,
+                  beginAtZero: true,
+                  ticks: { precision: 0 },
+                  title: {
+                    display: true,
+                    text: "Jumlah Dampak",
+                    font: { weight: "normal", size: 12 },
+                    color: "#475569",
+                  },
+                },
+              },
+            },
+            plugins: [topTotalPlugin], // Daftarkan plugin di sini
+          }),
+        );
+      }
+
+      function createPieChart(canvasId, labels, dataCounts) {
+        const ctx = document.getElementById(canvasId).getContext("2d");
+
+        // Plugin kustom untuk menampilkan nilai di dalam irisan (slice) Doughnut
+        const doughnutLabelPlugin = {
+          id: "doughnutLabelPlugin",
+          afterDatasetsDraw(chart) {
+            const { ctx, data } = chart;
+            ctx.save();
+            ctx.font = 'bold 12px "Segoe UI", Arial, sans-serif';
+            ctx.fillStyle = "#ffffff"; // Teks warna putih
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+
+            // Tambahkan efek bayangan tipis agar angka terbaca walau background irisan terang
+            ctx.shadowColor = "rgba(0, 0, 0, 0.4)";
+            ctx.shadowBlur = 3;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 1;
+
+            const meta = chart.getDatasetMeta(0);
+            meta.data.forEach((arc, i) => {
+              const val = data.datasets[0].data[i];
+              // Hanya render teks jika nilai > 0 dan arc tidak disembunyikan
+              if (val > 0 && !arc.hidden) {
+                const center = arc.tooltipPosition();
+                ctx.fillText(val, center.x, center.y);
+              }
+            });
+            ctx.restore();
+          },
+        };
+
+        chartInstances.push(
+          new Chart(ctx, {
+            type: "doughnut",
+            data: {
+              labels: labels,
+              datasets: [
+                {
+                  data: dataCounts,
+                  backgroundColor: labels.map((l) => getLabelColorHex(l)),
+                  borderWidth: 2,
+                  borderColor: "#ffffff",
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                tooltip: { enabled: true },
+                legend: {
+                  position: "bottom",
+                  labels: { usePointStyle: true, boxWidth: 8 },
+                },
+              },
+              cutout: "55%",
+            },
+            plugins: [doughnutLabelPlugin], // Daftarkan plugin di sini
+          }),
+        );
+      }
+
+      // Fungsi untuk membuat badge ranking pada tabel
+      function rankBadge(index) {
+        const rank = index + 1;
+        if (rank === 1) {
+          return `<span class="rank-badge rank-1">1</span>`;
+        } else if (rank === 2) {
+          return `<span class="rank-badge rank-2">2</span>`;
+        } else if (rank === 3) {
+          return `<span class="rank-badge rank-3">3</span>`;
+        } else {
+          return `<span class="rank-badge rank-n">${rank}</span>`;
+        }
+      }
+
+      function renderSummary() {
+        chartInstances.forEach((c) => c.destroy()); // Bersihkan chart lama
+        chartInstances = [];
+
+        const container = document.getElementById("summary-content");
+
+        if (state.length === 0 || state.every((t1) => t1.t2.length === 0)) {
+          container.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><div>Klik <b>Perbarui</b> atau <b>Generate Bagan</b> untuk menampilkan ringkasan.</div></div>`;
+          return;
+        }
+
+        const data = calcSummaryData();
+        const totalTahap = data.tahap.reduce((s, [, v]) => s + v.total, 0);
+        const totalKegiatan = data.kegiatan.reduce((s, r) => s + r.total, 0);
+        const totalKomponen = data.komponen.reduce(
+          (s, [, v]) => s + v.total,
+          0,
+        );
+        const totalLabel = data.label.reduce((s, [, v]) => s + v, 0);
+        const maxLabel = data.label.length > 0 ? data.label[0][1] : 1;
+
+        // ── RENDER UI SLICER ──
+        const escapeStr = (str) =>
+          String(str).replace(/'/g, "\\'").replace(/"/g, "&quot;");
+
+        let slicerHtml = `
+          <div class="settings-section summary-card" style="margin-bottom: 24px;">
+            <div class="accordion-header" onclick="toggleAccordion(this)" style="margin: 0; border: none; border-bottom: 1px solid #e2e8f0; background: #fff;">
+              🎛️ Filter Data (Slicer)
+            </div>
+            <div class="accordion-content" style="padding: 16px; background: #f8fafc;">
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                <div class="slicer-wrap" style="margin-bottom: 0; border: none; box-shadow: none;">
+                  <span class="slicer-title">📌 Tahap:</span>
+                  <button class="slicer-btn ${activeTahapFilter === null ? "active" : ""}" onclick="resetTahapSlicer()">Semua</button>
+                  ${data.allAvailableTahap.map((t) => `<button class="slicer-btn ${activeTahapFilter !== null && activeTahapFilter.includes(t) ? "active" : ""}" onclick="toggleTahapSlicer('${escapeStr(t)}')">${escapeHtml(t)}</button>`).join("")}
+                </div>
+
+                <div class="slicer-wrap" style="margin-bottom: 0; border: none; box-shadow: none;">
+                  <span class="slicer-title">⚙️ Kegiatan:</span>
+                  <button class="slicer-btn ${activeKegiatanFilter === null ? "active" : ""}" onclick="resetKegiatanSlicer()">Semua</button>
+                  ${data.allAvailableKegiatan.map((k) => `<button class="slicer-btn ${activeKegiatanFilter !== null && activeKegiatanFilter.includes(k) ? "active" : ""}" onclick="toggleKegiatanSlicer('${escapeStr(k)}')">${escapeHtml(k)}</button>`).join("")}
+                </div>
+
+                <div class="slicer-wrap" style="margin-bottom: 0; border: none; box-shadow: none;">
+                  <span class="slicer-title">⚗️ Dampak:</span>
+                  <button class="slicer-btn ${activeLabelsFilter === null ? "active" : ""}" onclick="resetSlicer()">Semua</button>
+                  ${data.allAvailableLabels.map((l) => `<button class="slicer-btn ${activeLabelsFilter !== null && activeLabelsFilter.includes(l) ? "active" : ""}" onclick="toggleSlicer('${escapeStr(l)}')">${escapeHtml(l)}</button>`).join("")}
+                </div>
+              </div>
+            </div>
+          </div>`;
+
+        if (totalTahap === 0) {
+          container.innerHTML =
+            slicerHtml +
+            `<div class="empty-state"><div class="empty-icon">🔍</div><div>Tidak ada data untuk label yang dipilih.</div></div>`;
+          return;
+        }
+
+        const labelHeaders = data.uniqueLabels
+          .map(
+            (l) =>
+              `<th class="num" style="border-left:1px solid #e2e8f0;">${escapeHtml(l)}</th><th class="num">%</th>`,
+          )
+          .join("");
+        const labelFooters = data.uniqueLabels
+          .map((l) => {
+            const count = data.label.find((x) => x[0] === l)?.[1] || 0;
+            const pct =
+              totalLabel > 0 ? Math.round((count / totalLabel) * 100) : 0;
+            return `<td class="pct" style="border-left:1px solid #e2e8f0;">${count}</td><td class="pct">${pct}%</td>`;
+          })
+          .join("");
+
+        const buildLabelCols = (labelsObj, rowTotal) => {
+          return data.uniqueLabels
+            .map((l) => {
+              const count = labelsObj[l];
+              if (count) {
+                const pct = Math.round((count / rowTotal) * 100);
+                return `<td class="pct" style="border-left:1px solid #e2e8f0;font-weight:bold;">${count}</td><td class="pct">${pct}%</td>`;
+              }
+              return `<td class="pct" style="border-left:1px solid #e2e8f0;">-</td><td class="pct">-</td>`;
+            })
+            .join("");
+        };
+
+        // TABEL 1
+        const t1aRows = data.tahap
+          .map(
+            ([name, obj], i) => `
+                <tr class="${i === 0 ? "top-row" : ""}">
+                  <td class="num">${rankBadge(i)}</td>
+                  <td>${escapeHtml(name)}</td><td class="num">${obj.total}</td>
+                  <td class="pct">${totalTahap > 0 ? Math.round((obj.total / totalTahap) * 100) + "%" : "-"}</td>
+                  ${buildLabelCols(obj.labels, obj.total)}
+                </tr>`,
+          )
+          .join("");
+        const tabel1a = `<div class="summary-card">
+                  <div class="summary-card-title">Tabel 1. Rekapitulasi per Tahap</div>
+                  <div style="overflow-x: auto;">
+                      <table class="sumtable">
+                      <thead><tr><th class="num" style="width:40px">No</th><th>Tahap</th><th class="num">Jumlah</th><th class="num">%</th>${labelHeaders}</tr></thead>
+                      <tbody>${t1aRows}</tbody>
+                      <tfoot><tr><td colspan="2"><b>Total</b></td><td class="num">${totalTahap}</td><td class="pct">100%</td>${labelFooters}</tr></tfoot>
+                      </table>
+                  </div>
+                  <div class="chart-container">
+                    <button class="btn-export-chart" style="position:absolute; top:10px; right:20px; z-index:10;" onclick="exportChartJS('chart-tahap', 'Chart_Tahap')">📥 Export Chart</button>
+                    <canvas id="chart-tahap"></canvas>
+                  </div>
+                </div>`;
+
+        // TABEL 2
+        const t1bRows = data.kegiatan
+          .map(
+            (row, i) => `
+                <tr class="${i === 0 ? "top-row" : ""}">
+                  <td class="num">${rankBadge(i)}</td>
+                  <td>${escapeHtml(row.kegiatan)}</td><td style="font-size:0.8em;color:#64748b">${escapeHtml(row.tahap)}</td>
+                  <td class="num">${row.total}</td>
+                  <td class="pct">${totalKegiatan > 0 ? Math.round((row.total / totalKegiatan) * 100) + "%" : "-"}</td>
+                  ${buildLabelCols(row.labels, row.total)}
+                </tr>`,
+          )
+          .join("");
+        const tabel1b = `<div class="summary-card">
+                  <div class="summary-card-title">Tabel 2. Rekapitulasi per Kegiatan</div>
+                  <div style="overflow-x: auto;">
+                      <table class="sumtable">
+                      <thead><tr><th class="num" style="width:40px">No</th><th>Kegiatan</th><th>Tahap</th><th class="num">Jumlah</th><th class="num">%</th>${labelHeaders}</tr></thead>
+                      <tbody>${t1bRows}</tbody>
+                      <tfoot><tr><td colspan="3"><b>Total</b></td><td class="num">${totalKegiatan}</td><td class="pct">100%</td>${labelFooters}</tr></tfoot>
+                      </table>
+                  </div>
+                  <div class="chart-container">
+                    <button class="btn-export-chart" style="position:absolute; top:10px; right:20px; z-index:10;" onclick="exportChartJS('chart-kegiatan', 'Chart_Kegiatan')">📥 Export Chart</button>
+                    <canvas id="chart-kegiatan"></canvas>
+                  </div>
+                </div>`;
+
+        // TABEL 3
+        const t1cRows = data.komponen
+          .map(
+            ([name, obj], i) => `
+                <tr class="${i === 0 ? "top-row" : ""}">
+                  <td class="num">${rankBadge(i)}</td>
+                  <td>${escapeHtml(name)}</td><td class="num">${obj.total}</td>
+                  <td class="pct">${totalKomponen > 0 ? Math.round((obj.total / totalKomponen) * 100) + "%" : "-"}</td>
+                  ${buildLabelCols(obj.labels, obj.total)}
+                </tr>`,
+          )
+          .join("");
+        const tabel1c = `<div class="summary-card">
+                  <div class="summary-card-title">Tabel 3. Rekapitulasi per Komponen Lingkungan</div>
+                  <div style="overflow-x: auto;">
+                      <table class="sumtable">
+                      <thead><tr><th class="num" style="width:40px">No</th><th>Komponen Lingkungan</th><th class="num">Jumlah Dampak</th><th class="num">%</th>${labelHeaders}</tr></thead>
+                      <tbody>${t1cRows}</tbody>
+                      <tfoot><tr><td colspan="2"><b>Total</b></td><td class="num">${totalKomponen}</td><td class="pct">100%</td>${labelFooters}</tr></tfoot>
+                      </table>
+                  </div>
+                  <div class="chart-container">
+                    <button class="btn-export-chart" style="position:absolute; top:10px; right:20px; z-index:10;" onclick="exportChartJS('chart-komponen', 'Chart_Komponen')">📥 Export Chart</button>
+                    <canvas id="chart-komponen"></canvas>
+                  </div>
+                </div>`;
+
+        // TABEL 4
+        const tabel2Rows = data.label
+          .map(([lbl, count], i) => {
+            const hexColor = getLabelColorHex(lbl);
+            const barW = Math.round((count / maxLabel) * 100);
+            return `<tr class="${i === 0 ? "top-row" : ""}">
+                    <td class="num">${rankBadge(i)}</td>
+                    <td><span class="label-pill" style="background:${hexColor}; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">${escapeHtml(lbl)}</span></td><td class="num">${count}</td>
+                    <td style="padding:9px 14px"><div class="label-bar-wrap">
+                        <div class="label-bar-bg"><div class="label-bar-fill" style="width:${barW}%; background:${hexColor};"></div></div>
+                        <span style="font-size:0.78em;color:#64748b;min-width:32px;text-align:right">${totalLabel > 0 ? Math.round((count / totalLabel) * 100) + "%" : "-"}</span>
+                      </div></td></tr>`;
+          })
+          .join("");
+        const tabel4 = `<div class="summary-card" style="margin-bottom:0">
+                  <div class="summary-card-title">Tabel 4. Rekapitulasi per Sifat Dampak</div>
+                  <table class="sumtable">
+                    <thead><tr><th class="num" style="width:40px">No</th><th>Label</th><th class="num">Jumlah</th><th>Proporsi</th></tr></thead>
+                    <tbody>${tabel2Rows}</tbody>
+                    <tfoot><tr><td colspan="2"><b>Total</b></td><td class="num">${totalLabel}</td><td></td></tr></tfoot>
+                  </table>
+                  <div class="chart-container" style="height: 350px;">
+                    <button class="btn-export-chart" style="position:absolute; top:10px; right:20px; z-index:10;" onclick="exportChartJS('chart-label', 'Chart_Label_Sifat')">📥 Export Chart</button>
+                    <canvas id="chart-label"></canvas>
+                  </div>
+                </div>`;
+
+        container.innerHTML =
+          slicerHtml +
+          tabel1a +
+          tabel1b +
+          tabel1c +
+          tabel4 +
+          `<div style="height:32px"></div>`;
+
+        // ── Inisialisasi Chart.js ──
+        const dataLabels = data.uniqueLabels;
+
+        createStackedBarChart(
+          "chart-tahap",
+          data.tahap.map((x) => x[0]),
+          data.tahap.map((x) => x[1]),
+          dataLabels,
+        );
+        createStackedBarChart(
+          "chart-kegiatan",
+          data.kegiatan.map((x) => x.kegiatan),
+          data.kegiatan,
+          dataLabels,
+        );
+        createStackedBarChart(
+          "chart-komponen",
+          data.komponen.map((x) => x[0]),
+          data.komponen.map((x) => x[1]),
+          dataLabels,
+        );
+
+        createPieChart(
+          "chart-label",
+          data.label.map((x) => x[0]),
+          data.label.map((x) => x[1]),
+        );
       }
 
       // ════════════════════════════════════════════════════════════════════
@@ -2179,11 +3224,11 @@
         const dx1 = a2.x - a1.x,
           dy1 = a2.y - a1.y,
           dx2 = b2.x - b1.x,
-          dy2 = b2.y - b1.y;
-        const denom = dx1 * dy2 - dy1 * dx2;
+          dy2 = b2.y - b1.y,
+          denom = dx1 * dy2 - dy1 * dx2;
         if (Math.abs(denom) < 0.001) return null;
-        const t = ((b1.x - a1.x) * dy2 - (b1.y - a1.y) * dx2) / denom;
-        const u = ((b1.x - a1.x) * dy1 - (b1.y - a1.y) * dx1) / denom;
+        const t = ((b1.x - a1.x) * dy2 - (b1.y - a1.y) * dx2) / denom,
+          u = ((b1.x - a1.x) * dy1 - (b1.y - a1.y) * dx1) / denom;
         return t > 0.01 && t < 0.99 && u > 0.01 && u < 0.99 ? t : null;
       }
 
@@ -2218,23 +3263,23 @@
           const ts = crossings[i].slice().sort((a, b) => a - b);
           let cur = 0;
           for (const t of ts) {
-            const jumpT = JUMP_R / len;
-            if (t - jumpT < cur || t + jumpT > 1) continue;
+            const jt = JUMP_R / len;
+            if (t - jt < cur || t + jt > 1) continue;
             d +=
               " L" +
-              (p0.x + dx * (t - jumpT)).toFixed(1) +
+              (p0.x + dx * (t - jt)).toFixed(1) +
               " " +
-              (p0.y + dy * (t - jumpT)).toFixed(1);
+              (p0.y + dy * (t - jt)).toFixed(1);
             d +=
               " A" +
               JUMP_R +
               " " +
               JUMP_R +
               " 0 0 1 " +
-              (p0.x + dx * (t + jumpT)).toFixed(1) +
+              (p0.x + dx * (t + jt)).toFixed(1) +
               " " +
-              (p0.y + dy * (t + jumpT)).toFixed(1);
-            cur = t + jumpT;
+              (p0.y + dy * (t + jt)).toFixed(1);
+            cur = t + jt;
           }
           d += " L" + p1.x.toFixed(1) + " " + p1.y.toFixed(1);
         }
@@ -2249,11 +3294,10 @@
           c.hitEl.setAttribute("d", ptsTod(c.pts));
         });
       }
-
       function getAnchor(n, side, off = 0) {
         const l = parseFloat(n.style.left) || 0,
-          t = parseFloat(n.style.top) || 0;
-        const w = n.offsetWidth,
+          t = parseFloat(n.style.top) || 0,
+          w = n.offsetWidth,
           h = n.offsetHeight || 44,
           cx = l + w / 2 + off;
         return side === "bottom" ? { x: cx, y: t + h } : { x: cx, y: t };
@@ -2268,14 +3312,14 @@
         srcOffX = 0,
         tgtOffX = 0,
       ) {
-        const markerId = ensureMarker(color);
-        const s = getAnchor(srcEl, "bottom", srcOffX),
+        const markerId = ensureMarker(color),
+          s = getAnchor(srcEl, "bottom", srcOffX),
           e = getAnchor(tgtEl, "top", tgtOffX);
         if (!connData[key]) connData[key] = {};
         if (connData[key].midRatio === undefined) connData[key].midRatio = 0.5;
-        const snap = Math.abs(s.x - e.x) <= STRAIGHT_THRESHOLD;
-        const effEX = snap ? s.x : e.x;
-        const midY = s.y + connData[key].midRatio * (e.y - s.y);
+        const snap = Math.abs(s.x - e.x) <= STRAIGHT_THRESHOLD,
+          effEX = snap ? s.x : e.x,
+          midY = s.y + connData[key].midRatio * (e.y - s.y);
         const pts = [
           { x: s.x, y: s.y },
           { x: s.x, y: midY },
@@ -2335,8 +3379,8 @@
 
         const handles = [];
         for (let i = 0; i < pts.length - 1; i++) {
-          const isH = Math.abs(pts[i].y - pts[i + 1].y) < 1;
-          const mx = (pts[i].x + pts[i + 1].x) / 2,
+          const isH = Math.abs(pts[i].y - pts[i + 1].y) < 1,
+            mx = (pts[i].x + pts[i + 1].x) / 2,
             my = (pts[i].y + pts[i + 1].y) / 2;
           const rect = document.createElementNS(
             "http://www.w3.org/2000/svg",
@@ -2449,24 +3493,18 @@
 
       function getMidLabelPos(pts) {
         if (!pts || pts.length < 2) return { x: 0, y: 0 };
-
         const distEl = document.getElementById("conf-label-dist");
         let distLeft = distEl ? parseFloat(distEl.value) : 28;
-
         for (let i = pts.length - 1; i > 0; i--) {
-          const p2 = pts[i];
-          const p1 = pts[i - 1];
-
-          const dx = p1.x - p2.x;
-          const dy = p1.y - p2.y;
-          const len = Math.sqrt(dx * dx + dy * dy);
-
+          const p2 = pts[i],
+            p1 = pts[i - 1],
+            dx = p1.x - p2.x,
+            dy = p1.y - p2.y,
+            len = Math.sqrt(dx * dx + dy * dy);
           if (distLeft <= len) {
             const t = len === 0 ? 0 : distLeft / len;
             return { x: p2.x + dx * t, y: p2.y + dy * t };
-          } else {
-            distLeft -= len;
-          }
+          } else distLeft -= len;
         }
         return { x: pts[0].x, y: pts[0].y };
       }
@@ -2521,37 +3559,26 @@
         hint.classList.remove("show");
       }
 
-      // ════════════════════════════════════════════════════════════════════
-      //  LASSO (DRAG) SELECTION
-      // ════════════════════════════════════════════════════════════════════
+      // ── LASSO ───────────────────────────────────────────────────────────
       const lassoBox = document.getElementById("lasso-box");
-      let isLasso = false;
-      let lassoStart = { x: 0, y: 0 };
+      let isLasso = false,
+        lassoStart = { x: 0, y: 0 };
 
       wrap.addEventListener("mousedown", (e) => {
         if (e.target !== wrap && e.target !== inner && e.target !== svgEl)
           return;
-
         deselectAll();
-        if (selectedConn) {
-          deselectConn(selectedConn);
-          selectedConn = null;
-        }
-
         isLasso = true;
         const rect = inner.getBoundingClientRect();
-
         lassoStart = {
           x: (e.clientX - rect.left) / currentZoom,
           y: (e.clientY - rect.top) / currentZoom,
         };
-
         lassoBox.style.left = lassoStart.x + "px";
         lassoBox.style.top = lassoStart.y + "px";
         lassoBox.style.width = "0px";
         lassoBox.style.height = "0px";
         lassoBox.style.display = "block";
-
         e.preventDefault();
         wrap.focus();
       });
@@ -2559,23 +3586,20 @@
       window.addEventListener("mousemove", (e) => {
         if (!isLasso) return;
         const rect = inner.getBoundingClientRect();
-        const curX = (e.clientX - rect.left) / currentZoom;
-        const curY = (e.clientY - rect.top) / currentZoom;
-
-        const x = Math.min(lassoStart.x, curX);
-        const y = Math.min(lassoStart.y, curY);
-        const w = Math.abs(curX - lassoStart.x);
-        const h = Math.abs(curY - lassoStart.y);
-
+        const curX = (e.clientX - rect.left) / currentZoom,
+          curY = (e.clientY - rect.top) / currentZoom;
+        const x = Math.min(lassoStart.x, curX),
+          y = Math.min(lassoStart.y, curY),
+          w = Math.abs(curX - lassoStart.x),
+          h = Math.abs(curY - lassoStart.y);
         lassoBox.style.left = x + "px";
         lassoBox.style.top = y + "px";
         lassoBox.style.width = w + "px";
         lassoBox.style.height = h + "px";
-
         document.querySelectorAll(".node").forEach((n) => {
-          const nx = parseFloat(n.style.left) || 0;
-          const ny = parseFloat(n.style.top) || 0;
-          const nw = n.offsetWidth,
+          const nx = parseFloat(n.style.left) || 0,
+            ny = parseFloat(n.style.top) || 0,
+            nw = n.offsetWidth,
             nh = n.offsetHeight;
           const hit = nx < x + w && nx + nw > x && ny < y + h && ny + nh > y;
           if (hit) {
@@ -2603,8 +3627,8 @@
           e.stopPropagation();
           const startX = e.clientX,
             startY = e.clientY,
-            c = connectors[key];
-          const orig = c.pts.map((p) => ({ ...p })),
+            c = connectors[key],
+            orig = c.pts.map((p) => ({ ...p })),
             lastIdx = c.pts.length - 1;
           function onMove(ev) {
             const dx = (ev.clientX - startX) / currentZoom,
@@ -2732,11 +3756,11 @@
 
       function refreshAllConns() {
         Object.keys(connectors).forEach((key) => {
-          const c = connectors[key];
-          const s = getAnchor(c.srcEl, "bottom", c.srcOffX),
+          const c = connectors[key],
+            s = getAnchor(c.srcEl, "bottom", c.srcOffX),
             t = getAnchor(c.tgtEl, "top", c.tgtOffX);
-          const effTX = Math.abs(s.x - t.x) <= STRAIGHT_THRESHOLD ? s.x : t.x;
-          const midY = s.y + (connData[key]?.midRatio ?? 0.5) * (t.y - s.y);
+          const effTX = Math.abs(s.x - t.x) <= STRAIGHT_THRESHOLD ? s.x : t.x,
+            midY = s.y + (connData[key]?.midRatio ?? 0.5) * (t.y - s.y);
           c.pts = [
             { x: s.x, y: s.y },
             { x: s.x, y: midY },
@@ -2757,14 +3781,10 @@
         });
       }
 
-      // ════════════════════════════════════════════════════════════════════
-      //  ALIGNMENT TOOL
-      // ════════════════════════════════════════════════════════════════════
+      // ── ALIGNMENT ───────────────────────────────────────────────────────
       function alignSelected(type) {
         if (selectedOrder.length < 2)
-          return alert(
-            "Pilih minimal 2 kotak (tahan tombol Ctrl/Cmd saat klik kotak).",
-          );
+          return alert("Pilih minimal 2 kotak (tahan Ctrl saat klik).");
         const refPos = {
           x: parseFloat(selectedOrder[0].style.left) || 0,
           y: parseFloat(selectedOrder[0].style.top) || 0,
@@ -2790,9 +3810,7 @@
         refreshAllConns();
       }
 
-      // ════════════════════════════════════════════════════════════════════
-      //  NODE CREATION & DRAG
-      // ════════════════════════════════════════════════════════════════════
+      // ── NODE CREATION & DRAG ────────────────────────────────────────────
       let isNodeDragging = false,
         dragStartX = 0,
         dragStartY = 0,
@@ -2914,9 +3932,7 @@
         refreshAllConns();
       });
 
-      // ════════════════════════════════════════════════════════════════════
-      //  MAIN RENDER
-      // ════════════════════════════════════════════════════════════════════
+      // ── MAIN RENDER ─────────────────────────────────────────────────────
       function renderCanvas() {
         deselectAll();
         Array.from(svgEl.children).forEach((c) => {
@@ -2950,8 +3966,8 @@
           t1.t2.forEach((t2) => {
             regConn("t1_" + t1.id, "t2_" + t2.id);
             t2.impacts.forEach((imp) => {
-              if (imp.q?.trim() !== "") hasQ = true;
-              if (imp.qi?.trim() !== "") hasQi = true;
+              if (imp.q && imp.q.trim() !== "") hasQ = true;
+              if (imp.qi && imp.qi.trim() !== "") hasQi = true;
               if (imp.p) {
                 const pId = nid(imp.p, "p");
                 regConn("t2_" + t2.id, pId);
@@ -3054,7 +4070,6 @@
               );
               t2Nodes.push(t2El);
               t2XPositions.push(t2X);
-
               t2.impacts.forEach((imp, j) => {
                 let impX = branchXs[j];
                 if (imp.p) {
@@ -3102,12 +4117,9 @@
         });
 
         if (!nodePositions["root"] || nodePositions["root"].x === 0) {
-          let centerRootX = Math.max(
-            currentX / 2 - 110,
-            wrap.offsetWidth / 2 - 110,
-          );
-          rootEl.style.left = centerRootX + "px";
-          nodePositions["root"] = { ...nodePositions["root"], x: centerRootX };
+          let cx = Math.max(currentX / 2 - 110, wrap.offsetWidth / 2 - 110);
+          rootEl.style.left = cx + "px";
+          nodePositions["root"] = { ...nodePositions["root"], x: cx };
         }
         setTimeout(rebuildAllPaths, 80);
       }
@@ -3132,7 +4144,7 @@
                   qi: "",
                   l_p: "-P",
                   l_s: "-P",
-                  l_t: "",
+                  l_t: "DPH",
                   l_q: "",
                   l_qi: "",
                 },
@@ -3163,10 +4175,8 @@
         loadNodeColorPickers();
         renderTraceColorGrid();
         renderInputs();
-
         renderCustomLegendsUI();
         renderCanvasLegends();
-
         setTimeout(() => {
           renderCanvas();
           setTimeout(rebuildAllPaths, 100);
