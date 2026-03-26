@@ -1722,6 +1722,36 @@
       let currentZoom = 1;
       let customLegends = [];
 
+      // Daftarkan Custom Positioner untuk Tooltip Bar Chart
+      Chart.Tooltip.positioners.sideEdge = function (elements, eventPosition) {
+        if (!elements.length) return false;
+        const chart = this.chart;
+        const el = elements[0].element;
+        const barWidth = el.width || 30;
+
+        // KASUS 1 BAR: Jika bar memakan lebih dari 40% lebar layar,
+        // posisikan tooltip persis di kursor (mouse) agar aman dan tidak error.
+        if (barWidth > chart.width * 0.4) {
+          return {
+            x: eventPosition.x,
+            y: eventPosition.y,
+          };
+        }
+
+        // KASUS NORMAL: Snap ke sisi tepi bar
+        const isLeftHalf = el.x < chart.width / 2;
+        return {
+          x: isLeftHalf ? el.x + barWidth / 2 : el.x - barWidth / 2,
+          y: eventPosition.y,
+        };
+      };
+      Chart.Tooltip.positioners.cursor = function (elements, eventPosition) {
+        if (!elements.length || !eventPosition) return false;
+        return {
+          x: eventPosition.x,
+          y: eventPosition.y,
+        };
+      };
       // Mengamankan input agar tidak merusak format HTML saat dirender
       function escapeHtml(text) {
         if (text === null || text === undefined) return "";
@@ -1925,16 +1955,17 @@
         currentZoom = 1;
         applyZoom();
       }
-      wrap.addEventListener(
-        "wheel",
-        (e) => {
-          if (e.ctrlKey || e.metaKey) {
-            e.preventDefault();
-            changeZoom(e.deltaY < 0 ? 0.05 : -0.05);
-          }
-        },
-        { passive: false },
-      );
+      // fungsi zoom in out kanvas dengan ctrl+wheel dimatikan
+      //      wrap.addEventListener(
+      //        "wheel",
+      //        (e) => {
+      //          if (e.ctrlKey || e.metaKey) {
+      //            e.preventDefault();
+      //            changeZoom(e.deltaY < 0 ? 0.05 : -0.05);
+      //          }
+      //        },
+      //        { passive: false },
+      //      );
 
       const nodeResizeObserver = window.ResizeObserver
         ? new ResizeObserver((entries) => {
@@ -2254,14 +2285,20 @@
           maxX = 800;
           maxY = 600;
         }
-        const chartWidth = Math.max(800, maxX + 100);
-        const chartCenter = minX + (maxX - minX) / 2;
         const legendEl = document.querySelector(".canvas-legend");
         const originalLegendCSS = legendEl.style.cssText;
+
+        // 1. Ukur lebar asli legenda terlebih dahulu
         legendEl.style.cssText =
           originalLegendCSS +
           "; position:absolute !important; display:flex !important; flex-wrap:nowrap !important; white-space:nowrap !important; width:max-content !important; visibility:hidden !important;";
         const idealLegendWidth = legendEl.offsetWidth;
+
+        // 2. Pastikan lebar kanvas cukup mengakomodasi kotak ATAU legenda (mana yang lebih lebar)
+        const chartWidth = Math.max(800, maxX + 100, idealLegendWidth + 60);
+
+        // 3. Pusatkan legenda di tengah-tengah kanvas export (bukan mengikuti kumpulan node)
+        const chartCenter = chartWidth / 2;
         let legendStyle =
           chartWidth >= idealLegendWidth
             ? "; position:absolute !important; display:flex !important; flex-wrap:nowrap !important; white-space:nowrap !important; width:max-content !important; align-items:center !important; justify-content:center !important; padding:10px 20px !important;"
@@ -2783,6 +2820,7 @@
           data: datasetsData.map((d) => d.labels[l] || 0),
           backgroundColor: getLabelColorHex(l),
           borderRadius: 3,
+          maxBarThickness: 200,
         }));
 
         // Plugin kustom untuk menampilkan Total di ujung atas bar
@@ -2795,7 +2833,7 @@
               scales: { x, y },
             } = chart;
             ctx.save();
-            ctx.font = 'bold 11px "Segoe UI", Arial, sans-serif';
+            ctx.font = 'normal 12px "Segoe UI", Arial, sans-serif';
             ctx.fillStyle = "#334155"; // Warna teks menyesuaikan tema
             ctx.textAlign = "center";
             ctx.textBaseline = "bottom";
@@ -2838,10 +2876,38 @@
               },
               interaction: { mode: "index", intersect: false },
               plugins: {
-                tooltip: { enabled: true },
+                tooltip: {
+                  enabled: true,
+                  position: "sideEdge", // <--- Memanggil custom positioner
+                  yAlign: "center", // <--- Memaksa tooltip muncul di samping bar
+                  xAlign: function (context) {
+                    const tooltip = context.tooltip;
+                    if (
+                      !tooltip ||
+                      !tooltip.dataPoints ||
+                      !tooltip.dataPoints.length
+                    )
+                      return "auto";
+
+                    const el = tooltip.dataPoints[0].element;
+                    const chart = context.chart;
+                    const barWidth = el.width || 30;
+
+                    // Jika 1 bar (sangat lebar), biarkan Chart.js memosisikan otomatis
+                    if (barWidth > chart.width * 0.4) return "auto";
+
+                    // Jika bar di kiri kanvas -> paksakan kotak ke arah kanan ('left')
+                    // Jika bar di kanan kanvas -> paksakan kotak ke arah kiri ('right')
+                    return el.x < chart.width / 2 ? "left" : "right";
+                  },
+                },
                 legend: {
                   position: "bottom",
-                  labels: { usePointStyle: true, boxWidth: 8 },
+                  labels: {
+                    usePointStyle: true,
+                    pointStyle: "rectRounded",
+                    boxWidth: 8,
+                  },
                 },
               },
               scales: {
@@ -2867,13 +2933,13 @@
       function createPieChart(canvasId, labels, dataCounts) {
         const ctx = document.getElementById(canvasId).getContext("2d");
 
-        // Plugin kustom untuk menampilkan nilai di dalam irisan (slice) Doughnut
+        // Plugin kustom untuk menampilkan nilai dan persentase di dalam irisan (slice)
         const doughnutLabelPlugin = {
           id: "doughnutLabelPlugin",
           afterDatasetsDraw(chart) {
             const { ctx, data } = chart;
             ctx.save();
-            ctx.font = 'bold 12px "Segoe UI", Arial, sans-serif';
+            ctx.font = 'bold 11px "Segoe UI", Arial, sans-serif'; // Ukuran font sedikit dikecilkan agar muat
             ctx.fillStyle = "#ffffff"; // Teks warna putih
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
@@ -2885,12 +2951,34 @@
             ctx.shadowOffsetY = 1;
 
             const meta = chart.getDatasetMeta(0);
+
+            // 1. Hitung total data yang sedang tampil (mengabaikan data yang di-hide dari legend)
+            let total = 0;
+            meta.data.forEach((arc, i) => {
+              if (!arc.hidden) {
+                total += data.datasets[0].data[i] || 0;
+              }
+            });
+
+            // 2. Gambar teks ke dalam chart
             meta.data.forEach((arc, i) => {
               const val = data.datasets[0].data[i];
               // Hanya render teks jika nilai > 0 dan arc tidak disembunyikan
               if (val > 0 && !arc.hidden) {
                 const center = arc.tooltipPosition();
-                ctx.fillText(val, center.x, center.y);
+
+                // Hitung persentase
+                const percentage =
+                  total > 0 ? Math.round((val / total) * 100) : 0;
+
+                // Format teks gabungan: "Jumlah (Persen%)"
+                // Pisahkan teks menjadi 2 variabel
+                const line1 = `${val}`;
+                const line2 = `(${percentage}%)`;
+
+                // Gambar menjadi 2 baris dengan menggeser koordinat Y (offset)
+                ctx.fillText(line1, center.x, center.y - 6); // Naik 6px untuk baris pertama
+                ctx.fillText(line2, center.x, center.y + 8); // Turun 8px untuk baris kedua
               }
             });
             ctx.restore();
@@ -2915,10 +3003,25 @@
               responsive: true,
               maintainAspectRatio: false,
               plugins: {
-                tooltip: { enabled: true },
+                tooltip: {
+                  enabled: true,
+                  position: "cursor",
+                  yAlign: "center",
+                  xAlign: function (context) {
+                    const tooltip = context.tooltip;
+                    if (!tooltip) return "auto";
+                    const chart = context.chart;
+                    // Jika kursor di paruh kiri, panah di kiri (kotak di kanan). Berlaku sebaliknya.
+                    return tooltip.caretX < chart.width / 2 ? "left" : "right";
+                  },
+                },
                 legend: {
                   position: "bottom",
-                  labels: { usePointStyle: true, boxWidth: 8 },
+                  labels: {
+                    usePointStyle: true,
+                    pointStyle: "rectRounded",
+                    boxWidth: 8,
+                  },
                 },
               },
               cutout: "55%",
@@ -2970,7 +3073,7 @@
         let slicerHtml = `
           <div class="settings-section summary-card" style="margin-bottom: 24px;">
             <div class="accordion-header" onclick="toggleAccordion(this)" style="margin: 0; border: none; border-bottom: 1px solid #e2e8f0; background: #fff;">
-              🎛️ Filter Data (Slicer)
+              🎛️ Filter Data
             </div>
             <div class="accordion-content" style="padding: 16px; background: #f8fafc;">
               <div style="display: flex; flex-direction: column; gap: 8px;">
@@ -3042,18 +3145,22 @@
                 </tr>`,
           )
           .join("");
-        const tabel1a = `<div class="summary-card">
-                  <div class="summary-card-title">Tabel 1. Rekapitulasi per Tahap</div>
-                  <div style="overflow-x: auto;">
-                      <table class="sumtable">
-                      <thead><tr><th class="num" style="width:40px">No</th><th>Tahap</th><th class="num">Jumlah</th><th class="num">%</th>${labelHeaders}</tr></thead>
-                      <tbody>${t1aRows}</tbody>
-                      <tfoot><tr><td colspan="2"><b>Total</b></td><td class="num">${totalTahap}</td><td class="pct">100%</td>${labelFooters}</tr></tfoot>
-                      </table>
+        const tabel1a = `<div class="summary-card" style="margin-bottom: 24px;">
+                  <div class="summary-card-title accordion-header" onclick="toggleAccordion(this)" style="margin: 0; border: none; border-bottom: 1px solid #e2e8f0; border-radius: 8px 8px 0 0;">
+                    📋 REKAPITULASI DAMPAK PER TAHAP
                   </div>
-                  <div class="chart-container">
-                    <button class="btn-export-chart" style="position:absolute; top:10px; right:20px; z-index:10;" onclick="exportChartJS('chart-tahap', 'Chart_Tahap')">📥 Export Chart</button>
-                    <canvas id="chart-tahap"></canvas>
+                  <div class="accordion-content" style="padding: 0;">
+                    <div style="overflow-x: auto;">
+                        <table class="sumtable">
+                        <thead><tr><th class="num" style="width:40px">No</th><th>Tahap</th><th class="num">Jumlah</th><th class="num">%</th>${labelHeaders}</tr></thead>
+                        <tbody>${t1aRows}</tbody>
+                        <tfoot><tr><td colspan="2"><b>Total</b></td><td class="num">${totalTahap}</td><td class="pct">100%</td>${labelFooters}</tr></tfoot>
+                        </table>
+                    </div>
+                    <div class="chart-container">
+                      <button class="btn-export-chart" style="position:absolute; top:10px; right:20px; z-index:10;" onclick="exportChartJS('chart-tahap', 'Chart_Tahap')">📥 Export Chart</button>
+                      <canvas id="chart-tahap"></canvas>
+                    </div>
                   </div>
                 </div>`;
 
@@ -3070,18 +3177,22 @@
                 </tr>`,
           )
           .join("");
-        const tabel1b = `<div class="summary-card">
-                  <div class="summary-card-title">Tabel 2. Rekapitulasi per Kegiatan</div>
-                  <div style="overflow-x: auto;">
-                      <table class="sumtable">
-                      <thead><tr><th class="num" style="width:40px">No</th><th>Kegiatan</th><th>Tahap</th><th class="num">Jumlah</th><th class="num">%</th>${labelHeaders}</tr></thead>
-                      <tbody>${t1bRows}</tbody>
-                      <tfoot><tr><td colspan="3"><b>Total</b></td><td class="num">${totalKegiatan}</td><td class="pct">100%</td>${labelFooters}</tr></tfoot>
-                      </table>
+        const tabel1b = `<div class="summary-card" style="margin-bottom: 24px;">
+                  <div class="summary-card-title accordion-header" onclick="toggleAccordion(this)" style="margin: 0; border: none; border-bottom: 1px solid #e2e8f0; border-radius: 8px 8px 0 0;">
+                    📋 REKAPITULASI DAMPAK PER KEGIATAN
                   </div>
-                  <div class="chart-container">
-                    <button class="btn-export-chart" style="position:absolute; top:10px; right:20px; z-index:10;" onclick="exportChartJS('chart-kegiatan', 'Chart_Kegiatan')">📥 Export Chart</button>
-                    <canvas id="chart-kegiatan"></canvas>
+                  <div class="accordion-content" style="padding: 0;">
+                    <div style="overflow-x: auto;">
+                        <table class="sumtable">
+                        <thead><tr><th class="num" style="width:40px">No</th><th>Kegiatan</th><th>Tahap</th><th class="num">Jumlah</th><th class="num">%</th>${labelHeaders}</tr></thead>
+                        <tbody>${t1bRows}</tbody>
+                        <tfoot><tr><td colspan="3"><b>Total</b></td><td class="num">${totalKegiatan}</td><td class="pct">100%</td>${labelFooters}</tr></tfoot>
+                        </table>
+                    </div>
+                    <div class="chart-container">
+                      <button class="btn-export-chart" style="position:absolute; top:10px; right:20px; z-index:10;" onclick="exportChartJS('chart-kegiatan', 'Chart_Kegiatan')">📥 Export Chart</button>
+                      <canvas id="chart-kegiatan"></canvas>
+                    </div>
                   </div>
                 </div>`;
 
@@ -3097,18 +3208,22 @@
                 </tr>`,
           )
           .join("");
-        const tabel1c = `<div class="summary-card">
-                  <div class="summary-card-title">Tabel 3. Rekapitulasi per Komponen Lingkungan</div>
-                  <div style="overflow-x: auto;">
-                      <table class="sumtable">
-                      <thead><tr><th class="num" style="width:40px">No</th><th>Komponen Lingkungan</th><th class="num">Jumlah Dampak</th><th class="num">%</th>${labelHeaders}</tr></thead>
-                      <tbody>${t1cRows}</tbody>
-                      <tfoot><tr><td colspan="2"><b>Total</b></td><td class="num">${totalKomponen}</td><td class="pct">100%</td>${labelFooters}</tr></tfoot>
-                      </table>
+        const tabel1c = `<div class="summary-card" style="margin-bottom: 24px;">
+                  <div class="summary-card-title accordion-header" onclick="toggleAccordion(this)" style="margin: 0; border: none; border-bottom: 1px solid #e2e8f0; border-radius: 8px 8px 0 0;">
+                    📋 REKAPITULASI DAMPAK PER KOMPONEN LINGKUNGAN
                   </div>
-                  <div class="chart-container">
-                    <button class="btn-export-chart" style="position:absolute; top:10px; right:20px; z-index:10;" onclick="exportChartJS('chart-komponen', 'Chart_Komponen')">📥 Export Chart</button>
-                    <canvas id="chart-komponen"></canvas>
+                  <div class="accordion-content" style="padding: 0;">
+                    <div style="overflow-x: auto;">
+                        <table class="sumtable">
+                        <thead><tr><th class="num" style="width:40px">No</th><th>Komponen Lingkungan</th><th class="num">Jumlah</th><th class="num">%</th>${labelHeaders}</tr></thead>
+                        <tbody>${t1cRows}</tbody>
+                        <tfoot><tr><td colspan="2"><b>Total</b></td><td class="num">${totalKomponen}</td><td class="pct">100%</td>${labelFooters}</tr></tfoot>
+                        </table>
+                    </div>
+                    <div class="chart-container">
+                      <button class="btn-export-chart" style="position:absolute; top:10px; right:20px; z-index:10;" onclick="exportChartJS('chart-komponen', 'Chart_Komponen')">📥 Export Chart</button>
+                      <canvas id="chart-komponen"></canvas>
+                    </div>
                   </div>
                 </div>`;
 
@@ -3127,15 +3242,19 @@
           })
           .join("");
         const tabel4 = `<div class="summary-card" style="margin-bottom:0">
-                  <div class="summary-card-title">Tabel 4. Rekapitulasi per Sifat Dampak</div>
-                  <table class="sumtable">
-                    <thead><tr><th class="num" style="width:40px">No</th><th>Label</th><th class="num">Jumlah</th><th>Proporsi</th></tr></thead>
-                    <tbody>${tabel2Rows}</tbody>
-                    <tfoot><tr><td colspan="2"><b>Total</b></td><td class="num">${totalLabel}</td><td></td></tr></tfoot>
-                  </table>
-                  <div class="chart-container" style="height: 350px;">
-                    <button class="btn-export-chart" style="position:absolute; top:10px; right:20px; z-index:10;" onclick="exportChartJS('chart-label', 'Chart_Label_Sifat')">📥 Export Chart</button>
-                    <canvas id="chart-label"></canvas>
+                  <div class="summary-card-title accordion-header" onclick="toggleAccordion(this)" style="margin: 0; border: none; border-bottom: 1px solid #e2e8f0; border-radius: 8px 8px 0 0;">
+                    📋 REKAPITULASI PER SIFAT DAMPAK
+                  </div>
+                  <div class="accordion-content" style="padding: 0;">
+                    <table class="sumtable">
+                      <thead><tr><th class="num" style="width:40px">No</th><th>Sifat Dampak</th><th class="num">Jumlah</th><th>Proporsi</th></tr></thead>
+                      <tbody>${tabel2Rows}</tbody>
+                      <tfoot><tr><td colspan="2"><b>Total</b></td><td class="num">${totalLabel}</td><td></td></tr></tfoot>
+                    </table>
+                    <div class="chart-container" style="height: 350px;">
+                      <button class="btn-export-chart" style="position:absolute; top:10px; right:20px; z-index:10;" onclick="exportChartJS('chart-label', 'Chart_Label_Sifat')">📥 Export Chart</button>
+                      <canvas id="chart-label"></canvas>
+                    </div>
                   </div>
                 </div>`;
 
