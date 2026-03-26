@@ -2251,8 +2251,6 @@
         const oldZoom = currentZoom;
         currentZoom = 1;
         applyZoom();
-
-        // 1. Hitung Bounding Box Kotak (Nodes)
         let minX = Infinity,
           maxX = 0,
           maxY = 0;
@@ -2273,53 +2271,36 @@
 
         const legendEl = document.querySelector(".canvas-legend");
         const originalLegendCSS = legendEl.style.cssText;
-        const legendParent = legendEl.parentNode;
+        const legendParent = legendEl.parentNode; // Simpan parent asal
 
         // Pindahkan legend masuk ke dalam canvas-wrap sementara waktu untuk diexport
         wrap.appendChild(legendEl);
 
-        // 2. Ukur lebar asli legenda terlebih dahulu
+        // 1. Ukur lebar asli legenda terlebih dahulu
         legendEl.style.cssText =
           originalLegendCSS +
           "; position:absolute !important; display:flex !important; flex-wrap:nowrap !important; white-space:nowrap !important; width:max-content !important; visibility:hidden !important;";
         const idealLegendWidth = legendEl.offsetWidth;
 
-        // 3. Pastikan lebar kanvas cukup mengakomodasi lebar bagan (node) ATAU legenda (tergantung mana yang lebih lebar)
-        const nodeW = maxX - minX;
-        const chartWidth = Math.max(800, nodeW + 100, idealLegendWidth + 60);
+        // 2. Pastikan lebar kanvas cukup mengakomodasi kotak ATAU legenda (mana yang lebih lebar)
+        const chartWidth = Math.max(800, maxX + 100, idealLegendWidth + 60);
 
-        // 4. Hitung titik tengah hasil canvas
+        // 3. Pusatkan legenda di tengah-tengah kanvas export (bukan mengikuti kumpulan node)
         const chartCenter = chartWidth / 2;
         let legendStyle =
           chartWidth >= idealLegendWidth
             ? "; position:absolute !important; display:flex !important; flex-wrap:nowrap !important; white-space:nowrap !important; width:max-content !important; align-items:center !important; justify-content:center !important; padding:10px 20px !important;"
             : `; position:absolute !important; display:flex !important; flex-wrap:wrap !important; white-space:normal !important; width:${chartWidth - 40}px !important; align-items:center !important; justify-content:center !important; padding:10px 20px !important; text-align:center !important;`;
-
         legendEl.style.cssText = originalLegendCSS + legendStyle;
-        const legendActualWidth = legendEl.offsetWidth; // Ambil ukuran real setelah setting style
         const legendHeight = legendEl.offsetHeight;
-
         const finalHeight = maxY + 50 + legendHeight + 50;
-
-        // --- PUSATKAN BAGAN ALIR (NODES) ---
-        // Hitung pergeseran X agar titik tengah bagan tepat berada di tengah chartWidth
-        const nodesCenter = (minX + maxX) / 2;
-        const shiftX = chartCenter - nodesCenter;
-
-        // Geser wrapper dalam secara sementara (Translate)
-        inner.style.transform = `scale(1) translateX(${shiftX}px)`;
-
-        // --- PUSATKAN LEGENDA ---
         legendEl.style.top = maxY + 50 + "px";
-        // Gunakan nilai px mutlak daripada transform(-50%) agar posisi lebih akurat saat di-export html2canvas
-        legendEl.style.left = chartCenter - legendActualWidth / 2 + "px";
-        legendEl.style.transform = "none";
-
+        legendEl.style.left = chartCenter + "px";
+        legendEl.style.transform = "translateX(-50%)";
         const originalStyle = wrap.getAttribute("style") || "";
         const osl = wrap.scrollLeft,
           ost = wrap.scrollTop;
         wrap.style.cssText = `position:absolute;top:0;left:0;width:${chartWidth}px;height:${finalHeight}px;overflow:visible;z-index:9999`;
-
         const safeTitle =
           document
             .getElementById("project_title")
@@ -2354,19 +2335,15 @@
           },
         })
           .then((canvas) => {
-            // Restore original state
             wrap.setAttribute("style", originalStyle);
             wrap.scrollLeft = osl;
             wrap.scrollTop = ost;
             legendEl.style.cssText = originalLegendCSS;
-            legendParent.appendChild(legendEl);
+            legendParent.appendChild(legendEl); // Kembalikan ke luar wrap
             btnPng.innerText = oldText;
             btnPng.disabled = false;
-
-            // applyZoom() otomatis akan mengembalikan translateX() seperti semula
             currentZoom = oldZoom;
             applyZoom();
-
             const link = document.createElement("a");
             link.download = safeTitle + "_HD.png";
             link.href = canvas.toDataURL("image/png");
@@ -2377,10 +2354,9 @@
             alert("Gagal export PNG.");
             wrap.setAttribute("style", originalStyle);
             legendEl.style.cssText = originalLegendCSS;
-            legendParent.appendChild(legendEl);
+            legendParent.appendChild(legendEl); // Kembalikan ke luar wrap
             btnPng.innerText = oldText;
             btnPng.disabled = false;
-
             currentZoom = oldZoom;
             applyZoom();
           });
@@ -2606,7 +2582,19 @@
         const allAvailableTahap = new Set();
         const allAvailableKegiatan = new Set();
 
-        // 1. Kumpulkan semua opsi untuk tombol Slicer sebelum data difilter
+        const labelPriority = [
+          "+P",
+          "-P",
+          "+TP",
+          "-TP",
+          "DL",
+          "DPH",
+          "DTPHKP",
+          "DTPH",
+          "TANPA LABEL",
+        ];
+
+        // 1. Kumpulkan semua opsi untuk tombol Slicer
         state.forEach((t1) => {
           const t1Text = t1.text || "Tahap Kosong";
           allAvailableTahap.add(t1Text);
@@ -2635,15 +2623,12 @@
         // 2. Kalkulasi Data Berdasarkan Filter yang Aktif
         state.forEach((t1) => {
           const t1Text = t1.text || "Tahap Kosong";
-          // FILTER TAHAP
           if (activeTahapFilter !== null && !activeTahapFilter.includes(t1Text))
             return;
-
           if (!byTahap[t1Text]) byTahap[t1Text] = { total: 0, labels: {} };
 
           t1.t2.forEach((t2) => {
             const t2Text = t2.text || "Kegiatan Kosong";
-            // FILTER KEGIATAN
             if (
               activeKegiatanFilter !== null &&
               !activeKegiatanFilter.includes(t2Text)
@@ -2657,6 +2642,7 @@
                 kegiatan: t2Text,
                 tahap: t1Text,
                 labels: {},
+                komponenTerdampak: {}, // Track by (Comp + Label)
               };
 
             t2.impacts.forEach((imp) => {
@@ -2669,23 +2655,49 @@
               ];
               pairs.forEach(({ val, lbl }) => {
                 if (val && val.trim()) {
-                  // Berikan default "Tanpa Label" jika lbl kosong
                   const l =
                     lbl && lbl.trim() !== "" ? lbl.trim() : "Tanpa Label";
-
-                  // FILTER LABEL
                   if (
                     activeLabelsFilter !== null &&
                     !activeLabelsFilter.includes(l)
-                  ) {
+                  )
                     return;
-                  }
+
+                  const compName = val.trim();
 
                   byTahap[t1Text].total++;
                   byKegiatan[kKey].total++;
-                  if (!byKomponen[val.trim()])
-                    byKomponen[val.trim()] = { total: 0, labels: {} };
-                  byKomponen[val.trim()].total++;
+
+                  // Perbaikan: Catat Kombinasi Komponen + Label
+                  const compLabelKey = compName + "|||" + l;
+                  if (!byKegiatan[kKey].komponenTerdampak[compLabelKey]) {
+                    byKegiatan[kKey].komponenTerdampak[compLabelKey] = {
+                      name: compName,
+                      label: l,
+                      count: 0,
+                    };
+                  }
+                  byKegiatan[kKey].komponenTerdampak[compLabelKey].count++;
+
+                  if (!byKomponen[compName])
+                    byKomponen[compName] = {
+                      total: 0,
+                      labels: {},
+                      kegiatanPemicu: {},
+                    };
+
+                  byKomponen[compName].total++;
+
+                  // Perbaikan: Catat Kombinasi Kegiatan + Label
+                  const kegLabelKey = t2Text + "|||" + l;
+                  if (!byKomponen[compName].kegiatanPemicu[kegLabelKey]) {
+                    byKomponen[compName].kegiatanPemicu[kegLabelKey] = {
+                      name: t2Text,
+                      label: l,
+                      count: 0,
+                    };
+                  }
+                  byKomponen[compName].kegiatanPemicu[kegLabelKey].count++;
 
                   uniqueLabels.add(l);
                   byLabel[l] = (byLabel[l] || 0) + 1;
@@ -2693,26 +2705,13 @@
                     (byTahap[t1Text].labels[l] || 0) + 1;
                   byKegiatan[kKey].labels[l] =
                     (byKegiatan[kKey].labels[l] || 0) + 1;
-                  byKomponen[val.trim()].labels[l] =
-                    (byKomponen[val.trim()].labels[l] || 0) + 1;
+                  byKomponen[compName].labels[l] =
+                    (byKomponen[compName].labels[l] || 0) + 1;
                 }
               });
             });
           });
         });
-
-        // Hierarki prioritas label sesuai aturan AMDAL
-        const labelPriority = [
-          "+P",
-          "-P",
-          "+TP",
-          "-TP",
-          "DL",
-          "DPH",
-          "DTPHKP",
-          "DTPH",
-          "TANPA LABEL",
-        ];
 
         const compareLabels = (labelsA, labelsB) => {
           for (const p of labelPriority) {
@@ -3062,7 +3061,7 @@
       }
 
       function renderSummary() {
-        chartInstances.forEach((c) => c.destroy()); // Bersihkan chart lama
+        chartInstances.forEach((c) => c.destroy());
         chartInstances = [];
 
         const container = document.getElementById("summary-content");
@@ -3082,10 +3081,10 @@
         const totalLabel = data.label.reduce((s, [, v]) => s + v, 0);
         const maxLabel = data.label.length > 0 ? data.label[0][1] : 1;
 
-        // ── RENDER UI SLICER ──
         const escapeStr = (str) =>
           String(str).replace(/'/g, "\\'").replace(/"/g, "&quot;");
 
+        // ── RENDER UI SLICER ──
         let slicerHtml = `
           <div class="settings-section summary-card" style="margin-bottom: 24px;">
             <div class="accordion-header" onclick="toggleAccordion(this)" style="margin: 0; border: none; border-bottom: 1px solid #e2e8f0; background: #fff;">
@@ -3098,13 +3097,11 @@
                   <button class="slicer-btn ${activeTahapFilter === null ? "active" : ""}" onclick="resetTahapSlicer()">Semua</button>
                   ${data.allAvailableTahap.map((t) => `<button class="slicer-btn ${activeTahapFilter !== null && activeTahapFilter.includes(t) ? "active" : ""}" onclick="toggleTahapSlicer('${escapeStr(t)}')">${escapeHtml(t)}</button>`).join("")}
                 </div>
-
                 <div class="slicer-wrap" style="margin-bottom: 0; border: none; box-shadow: none;">
                   <span class="slicer-title">⚙️ Kegiatan:</span>
                   <button class="slicer-btn ${activeKegiatanFilter === null ? "active" : ""}" onclick="resetKegiatanSlicer()">Semua</button>
                   ${data.allAvailableKegiatan.map((k) => `<button class="slicer-btn ${activeKegiatanFilter !== null && activeKegiatanFilter.includes(k) ? "active" : ""}" onclick="toggleKegiatanSlicer('${escapeStr(k)}')">${escapeHtml(k)}</button>`).join("")}
                 </div>
-
                 <div class="slicer-wrap" style="margin-bottom: 0; border: none; box-shadow: none;">
                   <span class="slicer-title">⚗️ Dampak:</span>
                   <button class="slicer-btn ${activeLabelsFilter === null ? "active" : ""}" onclick="resetSlicer()">Semua</button>
@@ -3117,10 +3114,105 @@
         if (totalTahap === 0) {
           container.innerHTML =
             slicerHtml +
-            `<div class="empty-state"><div class="empty-icon">🔍</div><div>Tidak ada data untuk label yang dipilih.</div></div>`;
+            `<div class="empty-state"><div class="empty-icon">🔍</div><div>Tidak ada data untuk filter yang dipilih.</div></div>`;
           return;
         }
 
+        // ── RENDER DATA ANALISIS TOP 5 ──
+        const top5Kegiatan = data.kegiatan.slice(0, 5);
+        const top5Komponen = data.komponen
+          .map((x) => ({ name: x[0], ...x[1] }))
+          .slice(0, 5);
+
+        const top5KegiatanHtml = top5Kegiatan
+          .map((row, i) => {
+            // Perbaikan: Badges merender jumlah dampak untuk komponen dan label spesifik
+            const komponenHtml = Object.values(row.komponenTerdampak)
+              .sort((a, b) => {
+                if (a.name !== b.name) return a.name.localeCompare(b.name);
+                return b.count - a.count;
+              })
+              .map(
+                (item) =>
+                  `<span style="display:inline-block; padding:3px 8px; background:${getLabelColorHex(item.label)}; border-radius:12px; font-size:0.8em; margin:2px 2px 2px 0; color:#fff; font-weight:600; text-shadow:0 1px 1px rgba(0,0,0,0.3)" title="Label: ${escapeHtml(item.label)}">${escapeHtml(item.name)}${item.count > 1 ? ` (${item.count})` : ""}</span>`,
+              )
+              .join("");
+            const labelsHtml = Object.entries(row.labels)
+              .sort((a, b) => b[1] - a[1])
+              .map(
+                ([lbl, val]) =>
+                  `<span style="display:inline-block; padding:2px 6px; background:${getLabelColorHex(lbl)}; border-radius:4px; font-size:0.75em; margin:2px; color:#fff; font-weight:bold; text-shadow:0 1px 1px rgba(0,0,0,0.3)">${escapeHtml(lbl)}: ${val}</span>`,
+              )
+              .join("");
+            return `<tr>
+            <td class="num">${rankBadge(i)}</td>
+            <td><b>${escapeHtml(row.kegiatan)}</b><br><span style="font-size:0.8em;color:#64748b">${escapeHtml(row.tahap)}</span></td>
+            <td class="num" style="font-size:1.1em; font-weight:bold; color:#0f172a;">${row.total}</td>
+            <td>${komponenHtml}</td>
+            <td>${labelsHtml}</td>
+          </tr>`;
+          })
+          .join("");
+
+        const tabelTop5Kegiatan = `<div class="summary-card" style="margin-bottom: 24px; border: 2px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+          <div class="summary-card-title accordion-header" onclick="toggleAccordion(this)" style="margin: 0; border: none; border-bottom: 1px solid #e2e8f0; background: #fff;">
+            📋 5 Besar Kegiatan Paling Berdampak
+          </div>
+          <div class="accordion-content" style="padding: 0;">
+            <div style="overflow-x: auto; padding: 10px;">
+              <table class="sumtable">
+                <thead><tr><th class="num" style="width:40px">Rank</th><th>Nama Kegiatan</th><th class="num" style="width:100px">Total Dampak</th><th>Komponen Lingkungan Terdampak</th><th>Rincian Sifat Dampak</th></tr></thead>
+                <tbody>${top5KegiatanHtml || '<tr><td colspan="5" class="num">Tidak ada data</td></tr>'}</tbody>
+              </table>
+            </div>
+          </div>
+        </div>`;
+
+        const top5KomponenHtml = top5Komponen
+          .map((row, i) => {
+            // Perbaikan: Badges merender jumlah dampak untuk kegiatan dan label spesifik
+            const kegiatanHtml = Object.values(row.kegiatanPemicu)
+              .sort((a, b) => {
+                if (a.name !== b.name) return a.name.localeCompare(b.name);
+                return b.count - a.count;
+              })
+              .map(
+                (item) =>
+                  `<span style="display:inline-block; padding:3px 8px; background:${getLabelColorHex(item.label)}; border-radius:12px; font-size:0.8em; margin:2px 2px 2px 0; color:#fff; font-weight:600; text-shadow:0 1px 1px rgba(0,0,0,0.3)" title="Label: ${escapeHtml(item.label)}">${escapeHtml(item.name)}${item.count > 1 ? ` (${item.count})` : ""}</span>`,
+              )
+              .join("");
+            const labelsHtml = Object.entries(row.labels)
+              .sort((a, b) => b[1] - a[1])
+              .map(
+                ([lbl, val]) =>
+                  `<span style="display:inline-block; padding:2px 6px; background:${getLabelColorHex(lbl)}; border-radius:4px; font-size:0.75em; margin:2px; color:#fff; font-weight:bold; text-shadow:0 1px 1px rgba(0,0,0,0.3)">${escapeHtml(lbl)}: ${val}</span>`,
+              )
+              .join("");
+            return `<tr>
+            <td class="num">${rankBadge(i)}</td>
+            <td><b>${escapeHtml(row.name)}</b></td>
+            <td class="num" style="font-size:1.1em; font-weight:bold; color:#0f172a;">${row.total}</td>
+            <td>${kegiatanHtml}</td>
+            <td>${labelsHtml}</td>
+          </tr>`;
+          })
+          .join("");
+
+        const tabelTop5Komponen = `<div class="summary-card" style="margin-bottom: 24px; border: 2px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+          <div class="summary-card-title accordion-header" onclick="toggleAccordion(this)" style="margin: 0; border: none; border-bottom: 1px solid #e2e8f0; background: #fff;">
+            📋 5 Besar Komponen Lingkungan Terdampak
+          </div>
+          <div class="accordion-content" style="padding: 0;">
+            <div style="overflow-x: auto; padding: 10px;">
+              <table class="sumtable">
+                <thead><tr><th class="num" style="width:40px">Rank</th><th>Komponen Lingkungan</th><th class="num" style="width:100px">Frekuensi Dampak</th><th>Sumber Dampak</th><th>Rincian Sifat Dampak</th></tr></thead>
+                <tbody>${top5KomponenHtml || '<tr><td colspan="5" class="num">Tidak ada data</td></tr>'}</tbody>
+              </table>
+            </div>
+          </div>
+        </div>`;
+
+        // (Bagian Label Headers & Footers Tabel Standar)
         const labelHeaders = data.uniqueLabels
           .map(
             (l) =>
@@ -3149,133 +3241,128 @@
             .join("");
         };
 
-        // TABEL 1
+        // TABEL 1A (Tahap)
         const t1aRows = data.tahap
           .map(
             ([name, obj], i) => `
-                <tr class="${i === 0 ? "top-row" : ""}">
-                  <td class="num">${rankBadge(i)}</td>
-                  <td>${escapeHtml(name)}</td><td class="num">${obj.total}</td>
-                  <td class="pct">${totalTahap > 0 ? Math.round((obj.total / totalTahap) * 100) + "%" : "-"}</td>
-                  ${buildLabelCols(obj.labels, obj.total)}
-                </tr>`,
+            <tr class="${i === 0 ? "top-row" : ""}">
+              <td class="num">${rankBadge(i)}</td>
+              <td>${escapeHtml(name)}</td><td class="num">${obj.total}</td>
+              <td class="pct">${totalTahap > 0 ? Math.round((obj.total / totalTahap) * 100) + "%" : "-"}</td>
+              ${buildLabelCols(obj.labels, obj.total)}
+            </tr>`,
           )
           .join("");
         const tabel1a = `<div class="summary-card" style="margin-bottom: 24px;">
-                  <div class="summary-card-title accordion-header" onclick="toggleAccordion(this)" style="margin: 0; border: none; border-bottom: 1px solid #e2e8f0; border-radius: 8px 8px 0 0;">
-                    📋 REKAPITULASI DAMPAK PER TAHAP
-                  </div>
-                  <div class="accordion-content" style="padding: 0;">
-                    <div style="overflow-x: auto;">
-                        <table class="sumtable">
-                        <thead><tr><th class="num" style="width:40px">No</th><th>Tahap</th><th class="num">Jumlah</th><th class="num">%</th>${labelHeaders}</tr></thead>
-                        <tbody>${t1aRows}</tbody>
-                        <tfoot><tr><td colspan="2"><b>Total</b></td><td class="num">${totalTahap}</td><td class="pct">100%</td>${labelFooters}</tr></tfoot>
-                        </table>
-                    </div>
-                    <div class="chart-container">
-                      <button class="btn-export-chart" style="position:absolute; top:10px; right:20px; z-index:10;" onclick="exportChartJS('chart-tahap', 'Chart_Tahap')">📥 Export Chart</button>
-                      <canvas id="chart-tahap"></canvas>
-                    </div>
-                  </div>
-                </div>`;
+            <div class="summary-card-title accordion-header" onclick="toggleAccordion(this)" style="margin: 0; border: none; border-bottom: 1px solid #e2e8f0; background: #fff;">📋 REKAPITULASI DAMPAK PER TAHAP</div>
+            <div class="accordion-content" style="padding: 0;">
+              <div style="overflow-x: auto;">
+                  <table class="sumtable">
+                  <thead><tr><th class="num" style="width:40px">No</th><th>Tahap</th><th class="num">Jumlah</th><th class="num">%</th>${labelHeaders}</tr></thead>
+                  <tbody>${t1aRows}</tbody>
+                  <tfoot><tr><td colspan="2"><b>Total</b></td><td class="num">${totalTahap}</td><td class="pct">100%</td>${labelFooters}</tr></tfoot>
+                  </table>
+              </div>
+              <div class="chart-container">
+                <button class="btn-export-chart" style="position:absolute; top:10px; right:20px; z-index:10;" onclick="exportChartJS('chart-tahap', 'Chart_Tahap')">📥 Export Chart</button>
+                <canvas id="chart-tahap"></canvas>
+              </div>
+            </div>
+          </div>`;
 
-        // TABEL 2
+        // TABEL 1B (Kegiatan)
         const t1bRows = data.kegiatan
           .map(
             (row, i) => `
-                <tr class="${i === 0 ? "top-row" : ""}">
-                  <td class="num">${rankBadge(i)}</td>
-                  <td>${escapeHtml(row.kegiatan)}</td><td style="font-size:0.8em;color:#64748b">${escapeHtml(row.tahap)}</td>
-                  <td class="num">${row.total}</td>
-                  <td class="pct">${totalKegiatan > 0 ? Math.round((row.total / totalKegiatan) * 100) + "%" : "-"}</td>
-                  ${buildLabelCols(row.labels, row.total)}
-                </tr>`,
+            <tr class="${i === 0 ? "top-row" : ""}">
+              <td class="num">${rankBadge(i)}</td>
+              <td>${escapeHtml(row.kegiatan)}</td><td style="font-size:0.8em;color:#64748b">${escapeHtml(row.tahap)}</td>
+              <td class="num">${row.total}</td>
+              <td class="pct">${totalKegiatan > 0 ? Math.round((row.total / totalKegiatan) * 100) + "%" : "-"}</td>
+              ${buildLabelCols(row.labels, row.total)}
+            </tr>`,
           )
           .join("");
         const tabel1b = `<div class="summary-card" style="margin-bottom: 24px;">
-                  <div class="summary-card-title accordion-header" onclick="toggleAccordion(this)" style="margin: 0; border: none; border-bottom: 1px solid #e2e8f0; border-radius: 8px 8px 0 0;">
-                    📋 REKAPITULASI DAMPAK PER KEGIATAN
-                  </div>
-                  <div class="accordion-content" style="padding: 0;">
-                    <div style="overflow-x: auto;">
-                        <table class="sumtable">
-                        <thead><tr><th class="num" style="width:40px">No</th><th>Kegiatan</th><th>Tahap</th><th class="num">Jumlah</th><th class="num">%</th>${labelHeaders}</tr></thead>
-                        <tbody>${t1bRows}</tbody>
-                        <tfoot><tr><td colspan="3"><b>Total</b></td><td class="num">${totalKegiatan}</td><td class="pct">100%</td>${labelFooters}</tr></tfoot>
-                        </table>
-                    </div>
-                    <div class="chart-container">
-                      <button class="btn-export-chart" style="position:absolute; top:10px; right:20px; z-index:10;" onclick="exportChartJS('chart-kegiatan', 'Chart_Kegiatan')">📥 Export Chart</button>
-                      <canvas id="chart-kegiatan"></canvas>
-                    </div>
-                  </div>
-                </div>`;
+            <div class="summary-card-title accordion-header" onclick="toggleAccordion(this)" style="margin: 0; border: none; border-bottom: 1px solid #e2e8f0; background: #fff;">📋 REKAPITULASI DAMPAK PER KEGIATAN</div>
+            <div class="accordion-content" style="padding: 0;">
+              <div style="overflow-x: auto;">
+                  <table class="sumtable">
+                  <thead><tr><th class="num" style="width:40px">No</th><th>Kegiatan</th><th>Tahap</th><th class="num">Jumlah</th><th class="num">%</th>${labelHeaders}</tr></thead>
+                  <tbody>${t1bRows}</tbody>
+                  <tfoot><tr><td colspan="3"><b>Total</b></td><td class="num">${totalKegiatan}</td><td class="pct">100%</td>${labelFooters}</tr></tfoot>
+                  </table>
+              </div>
+              <div class="chart-container">
+                <button class="btn-export-chart" style="position:absolute; top:10px; right:20px; z-index:10;" onclick="exportChartJS('chart-kegiatan', 'Chart_Kegiatan')">📥 Export Chart</button>
+                <canvas id="chart-kegiatan"></canvas>
+              </div>
+            </div>
+          </div>`;
 
-        // TABEL 3
+        // TABEL 1C (Komponen)
         const t1cRows = data.komponen
           .map(
             ([name, obj], i) => `
-                <tr class="${i === 0 ? "top-row" : ""}">
-                  <td class="num">${rankBadge(i)}</td>
-                  <td>${escapeHtml(name)}</td><td class="num">${obj.total}</td>
-                  <td class="pct">${totalKomponen > 0 ? Math.round((obj.total / totalKomponen) * 100) + "%" : "-"}</td>
-                  ${buildLabelCols(obj.labels, obj.total)}
-                </tr>`,
+            <tr class="${i === 0 ? "top-row" : ""}">
+              <td class="num">${rankBadge(i)}</td>
+              <td>${escapeHtml(name)}</td><td class="num">${obj.total}</td>
+              <td class="pct">${totalKomponen > 0 ? Math.round((obj.total / totalKomponen) * 100) + "%" : "-"}</td>
+              ${buildLabelCols(obj.labels, obj.total)}
+            </tr>`,
           )
           .join("");
         const tabel1c = `<div class="summary-card" style="margin-bottom: 24px;">
-                  <div class="summary-card-title accordion-header" onclick="toggleAccordion(this)" style="margin: 0; border: none; border-bottom: 1px solid #e2e8f0; border-radius: 8px 8px 0 0;">
-                    📋 REKAPITULASI DAMPAK PER KOMPONEN LINGKUNGAN
-                  </div>
-                  <div class="accordion-content" style="padding: 0;">
-                    <div style="overflow-x: auto;">
-                        <table class="sumtable">
-                        <thead><tr><th class="num" style="width:40px">No</th><th>Komponen Lingkungan</th><th class="num">Jumlah</th><th class="num">%</th>${labelHeaders}</tr></thead>
-                        <tbody>${t1cRows}</tbody>
-                        <tfoot><tr><td colspan="2"><b>Total</b></td><td class="num">${totalKomponen}</td><td class="pct">100%</td>${labelFooters}</tr></tfoot>
-                        </table>
-                    </div>
-                    <div class="chart-container">
-                      <button class="btn-export-chart" style="position:absolute; top:10px; right:20px; z-index:10;" onclick="exportChartJS('chart-komponen', 'Chart_Komponen')">📥 Export Chart</button>
-                      <canvas id="chart-komponen"></canvas>
-                    </div>
-                  </div>
-                </div>`;
+            <div class="summary-card-title accordion-header" onclick="toggleAccordion(this)" style="margin: 0; border: none; border-bottom: 1px solid #e2e8f0; background: #fff;">📋 REKAPITULASI DAMPAK PER KOMPONEN LINGKUNGAN</div>
+            <div class="accordion-content" style="padding: 0;">
+              <div style="overflow-x: auto;">
+                  <table class="sumtable">
+                  <thead><tr><th class="num" style="width:40px">No</th><th>Komponen Lingkungan</th><th class="num">Jumlah</th><th class="num">%</th>${labelHeaders}</tr></thead>
+                  <tbody>${t1cRows}</tbody>
+                  <tfoot><tr><td colspan="2"><b>Total</b></td><td class="num">${totalKomponen}</td><td class="pct">100%</td>${labelFooters}</tr></tfoot>
+                  </table>
+              </div>
+              <div class="chart-container">
+                <button class="btn-export-chart" style="position:absolute; top:10px; right:20px; z-index:10;" onclick="exportChartJS('chart-komponen', 'Chart_Komponen')">📥 Export Chart</button>
+                <canvas id="chart-komponen"></canvas>
+              </div>
+            </div>
+          </div>`;
 
-        // TABEL 4
+        // TABEL 4 (Sifat Dampak)
         const tabel2Rows = data.label
           .map(([lbl, count], i) => {
             const hexColor = getLabelColorHex(lbl);
             const barW = Math.round((count / maxLabel) * 100);
             return `<tr class="${i === 0 ? "top-row" : ""}">
-                    <td class="num">${rankBadge(i)}</td>
-                    <td><span class="label-pill" style="background:${hexColor}; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">${escapeHtml(lbl)}</span></td><td class="num">${count}</td>
-                    <td style="padding:9px 14px"><div class="label-bar-wrap">
-                        <div class="label-bar-bg"><div class="label-bar-fill" style="width:${barW}%; background:${hexColor};"></div></div>
-                        <span style="font-size:0.78em;color:#64748b;min-width:32px;text-align:right">${totalLabel > 0 ? Math.round((count / totalLabel) * 100) + "%" : "-"}</span>
-                      </div></td></tr>`;
+              <td class="num">${rankBadge(i)}</td>
+              <td><span class="label-pill" style="background:${hexColor}; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">${escapeHtml(lbl)}</span></td><td class="num">${count}</td>
+              <td style="padding:9px 14px"><div class="label-bar-wrap">
+                  <div class="label-bar-bg"><div class="label-bar-fill" style="width:${barW}%; background:${hexColor};"></div></div>
+                  <span style="font-size:0.78em;color:#64748b;min-width:32px;text-align:right">${totalLabel > 0 ? Math.round((count / totalLabel) * 100) + "%" : "-"}</span>
+                </div></td></tr>`;
           })
           .join("");
         const tabel4 = `<div class="summary-card" style="margin-bottom:0">
-                  <div class="summary-card-title accordion-header" onclick="toggleAccordion(this)" style="margin: 0; border: none; border-bottom: 1px solid #e2e8f0; border-radius: 8px 8px 0 0;">
-                    📋 REKAPITULASI PER SIFAT DAMPAK
-                  </div>
-                  <div class="accordion-content" style="padding: 0;">
-                    <table class="sumtable">
-                      <thead><tr><th class="num" style="width:40px">No</th><th>Sifat Dampak</th><th class="num">Jumlah</th><th>Proporsi</th></tr></thead>
-                      <tbody>${tabel2Rows}</tbody>
-                      <tfoot><tr><td colspan="2"><b>Total</b></td><td class="num">${totalLabel}</td><td></td></tr></tfoot>
-                    </table>
-                    <div class="chart-container" style="height: 350px;">
-                      <button class="btn-export-chart" style="position:absolute; top:10px; right:20px; z-index:10;" onclick="exportChartJS('chart-label', 'Chart_Label_Sifat')">📥 Export Chart</button>
-                      <canvas id="chart-label"></canvas>
-                    </div>
-                  </div>
-                </div>`;
+            <div class="summary-card-title accordion-header" onclick="toggleAccordion(this)" style="margin: 0; border: none; border-bottom: 1px solid #e2e8f0; background: #fff;">📋 REKAPITULASI PER SIFAT DAMPAK</div>
+            <div class="accordion-content" style="padding: 0;">
+              <table class="sumtable">
+                <thead><tr><th class="num" style="width:40px">No</th><th>Sifat Dampak</th><th class="num">Jumlah</th><th>Proporsi</th></tr></thead>
+                <tbody>${tabel2Rows}</tbody>
+                <tfoot><tr><td colspan="2"><b>Total</b></td><td class="num">${totalLabel}</td><td></td></tr></tfoot>
+              </table>
+              <div class="chart-container" style="height: 350px;">
+                <button class="btn-export-chart" style="position:absolute; top:10px; right:20px; z-index:10;" onclick="exportChartJS('chart-label', 'Chart_Label_Sifat')">📥 Export Chart</button>
+                <canvas id="chart-label"></canvas>
+              </div>
+            </div>
+          </div>`;
 
+        // ── INJECT KE DALAM CONTAINER ──
         container.innerHTML =
           slicerHtml +
+          tabelTop5Kegiatan +
+          tabelTop5Komponen +
           tabel1a +
           tabel1b +
           tabel1c +
@@ -3285,6 +3372,9 @@
         // ── Inisialisasi Chart.js ──
         const dataLabels = data.uniqueLabels;
 
+        // Chart Horizontal Top 5 Dihapus Sesuai Permintaan
+
+        // Chart Original Stacked Bar Tetap Dipertahankan
         createStackedBarChart(
           "chart-tahap",
           data.tahap.map((x) => x[0]),
@@ -3303,7 +3393,6 @@
           data.komponen.map((x) => x[1]),
           dataLabels,
         );
-
         createPieChart(
           "chart-label",
           data.label.map((x) => x[0]),
