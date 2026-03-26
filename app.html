@@ -494,6 +494,7 @@
         display: none;
         flex: 1;
         overflow: hidden;
+        position: relative; /* DITAMBAHKAN AGAR FLOATING BERHASIL */
       }
       .tab-panel.active {
         display: flex;
@@ -1037,7 +1038,8 @@
         #btn-toggle-sidebar,
         .zoom-controls,
         .tab-bar,
-        .btn-export-chart {
+        .btn-export-chart,
+        .btn-export-float {
           display: none !important;
         }
         #main-right {
@@ -1565,7 +1567,6 @@
           lurus<br />
           <b>Drag di kanvas kosong</b>: Lasso seleksi<br />
           <b>Keyboard Panah</b>: Geser kotak terpilih<br />
-          <b>Ctrl+Scroll</b>: Zoom in/out<br />
           <b>Klik Panah</b>: Edit jalur & label<br /><br />
           <b>Copyright:</b> nto
         </div>
@@ -1599,91 +1600,88 @@
       </div>
 
       <div class="tab-panel active" id="tab-canvas">
-        <div id="canvas-wrap" tabindex="0">
-          <button class="btn-export-float" onclick="exportPNG()">
-            📥 Export PNG
+        <button class="btn-export-float" onclick="exportPNG()">
+          📥 Export PNG
+        </button>
+
+        <div class="zoom-controls">
+          <button onclick="changeZoom(-0.05)" title="Zoom Out">➖</button>
+          <span id="zoom-val">100%</span>
+          <button onclick="changeZoom(0.05)" title="Zoom In">➕</button>
+          <button
+            onclick="resetZoom()"
+            title="Reset Zoom"
+            style="font-weight: bold"
+          >
+            ⟲
           </button>
+        </div>
 
-          <div class="zoom-controls">
-            <button onclick="changeZoom(-0.05)" title="Zoom Out">➖</button>
-            <span id="zoom-val">100%</span>
-            <button onclick="changeZoom(0.05)" title="Zoom In">➕</button>
-            <button
-              onclick="resetZoom()"
-              title="Reset Zoom"
-              style="font-weight: bold"
-            >
-              ⟲
-            </button>
-          </div>
+        <div id="hint">
+          Drag segmen biru untuk mengatur jalur panah &nbsp;·&nbsp; Klik di luar
+          untuk deselect
+        </div>
 
+        <div class="canvas-legend">
+          <span
+            ><span
+              class="leg-box"
+              style="background: var(--bg-t1); border: 2px solid var(--bd-t1)"
+            ></span
+            >Tahap</span
+          >
+          <span
+            ><span
+              class="leg-box"
+              style="background: var(--bg-t2); border: 2px solid var(--bd-t2)"
+            ></span
+            >Kegiatan</span
+          >
+          <span
+            ><span
+              class="leg-box"
+              style="background: var(--bg-p); border: 2px solid var(--bd-p)"
+            ></span
+            >Dampak Primer</span
+          >
+          <span
+            ><span
+              class="leg-box"
+              style="background: var(--bg-s); border: 2px solid var(--bd-s)"
+            ></span
+            >Dampak Sekunder</span
+          >
+          <span
+            ><span
+              class="leg-box"
+              style="background: var(--bg-t); border: 2px solid var(--bd-t)"
+            ></span
+            >Dampak Tersier</span
+          >
+          <span id="leg-q" style="display: none"
+            ><span
+              class="leg-box"
+              style="background: var(--bg-q); border: 2px solid var(--bd-q)"
+            ></span
+            >Dampak Kuartier</span
+          >
+          <span id="leg-qi" style="display: none"
+            ><span
+              class="leg-box"
+              style="background: var(--bg-qi); border: 2px solid var(--bd-qi)"
+            ></span
+            >Dampak Kuintier</span
+          >
+          <span><span></span>Warna Panah = Aliran Dampak</span>
+          <span id="custom-legends-container" style="display: contents"></span>
+        </div>
+
+        <div id="canvas-wrap" tabindex="0">
           <div id="canvas-inner">
             <div id="lasso-box"></div>
             <svg id="svg-layer" xmlns="http://www.w3.org/2000/svg">
               <defs></defs>
             </svg>
-          </div>
-
-          <div id="hint">
-            Drag segmen biru untuk mengatur jalur panah &nbsp;·&nbsp; Klik di
-            luar untuk deselect
-          </div>
-
-          <div class="canvas-legend">
-            <span
-              ><span
-                class="leg-box"
-                style="background: var(--bg-t1); border: 2px solid var(--bd-t1)"
-              ></span
-              >Tahap</span
-            >
-            <span
-              ><span
-                class="leg-box"
-                style="background: var(--bg-t2); border: 2px solid var(--bd-t2)"
-              ></span
-              >Kegiatan</span
-            >
-            <span
-              ><span
-                class="leg-box"
-                style="background: var(--bg-p); border: 2px solid var(--bd-p)"
-              ></span
-              >Dampak Primer</span
-            >
-            <span
-              ><span
-                class="leg-box"
-                style="background: var(--bg-s); border: 2px solid var(--bd-s)"
-              ></span
-              >Dampak Sekunder</span
-            >
-            <span
-              ><span
-                class="leg-box"
-                style="background: var(--bg-t); border: 2px solid var(--bd-t)"
-              ></span
-              >Dampak Tersier</span
-            >
-            <span id="leg-q" style="display: none"
-              ><span
-                class="leg-box"
-                style="background: var(--bg-q); border: 2px solid var(--bd-q)"
-              ></span
-              >Dampak Kuartier</span
-            >
-            <span id="leg-qi" style="display: none"
-              ><span
-                class="leg-box"
-                style="background: var(--bg-qi); border: 2px solid var(--bd-qi)"
-              ></span
-              >Dampak Kuintier</span
-            >
-            <span><span></span>Warna Panah = Aliran Dampak</span>
-            <span
-              id="custom-legends-container"
-              style="display: contents"
-            ></span>
           </div>
         </div>
       </div>
@@ -2202,13 +2200,7 @@
         renderCanvas();
       }
 
-      // EXPORT FUNGSI CHART KHUSUS
-      // EXPORT FUNGSI CHART KHUSUS (DIUBAH MENJADI HD)
-      // EXPORT FUNGSI CHART KHUSUS (DIUBAH MENJADI HD - FIX)
-      // EXPORT FUNGSI CHART KHUSUS (DIUBAH MENJADI HD - MENGGUNAKAN HTML2CANVAS)
-      // EXPORT FUNGSI CHART KHUSUS (DIUBAH MENJADI NATIVE HD)
       window.exportChartJS = function (canvasId, fileName) {
-        // Ambil instance Chart.js yang sedang aktif di canvas tersebut
         const chart = Chart.getChart(canvasId);
         if (!chart) return;
 
@@ -2219,43 +2211,34 @@
           btn.disabled = true;
         }
 
-        // 1. Simpan konfigurasi resolusi & animasi asli
         const originalRatio =
           chart.options.devicePixelRatio || window.devicePixelRatio;
         const originalAnimation = chart.options.animation;
 
-        // 2. Paksa Chart.js merender ulang dengan kerapatan pixel 3x lipat (HD) tanpa animasi
         chart.options.devicePixelRatio = 3;
         chart.options.animation = false;
         chart.update();
 
-        // 3. Beri jeda sangat singkat agar proses render HD selesai
         setTimeout(() => {
-          // Chart.js defaultnya berlatar transparan. Kita buat canvas sementara agar backgroundnya putih.
           const tempCanvas = document.createElement("canvas");
           tempCanvas.width = chart.canvas.width;
           tempCanvas.height = chart.canvas.height;
           const ctx = tempCanvas.getContext("2d");
 
-          // Isi dengan warna putih murni
           ctx.fillStyle = "#ffffff";
           ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
 
-          // Gambar grafik HD dari Chart.js ke atas background putih
           ctx.drawImage(chart.canvas, 0, 0);
 
-          // Proses Download
           const link = document.createElement("a");
           link.download = fileName + "_HD.png";
           link.href = tempCanvas.toDataURL("image/png", 1.0);
           link.click();
 
-          // 4. Kembalikan ukuran dan animasi Chart ke kondisi semula agar UI tidak kacau
           chart.options.devicePixelRatio = originalRatio;
           chart.options.animation = originalAnimation;
           chart.update();
 
-          // Kembalikan tombol
           if (btn) {
             btn.innerText = oldText;
             btn.disabled = false;
@@ -2285,8 +2268,13 @@
           maxX = 800;
           maxY = 600;
         }
+
         const legendEl = document.querySelector(".canvas-legend");
         const originalLegendCSS = legendEl.style.cssText;
+        const legendParent = legendEl.parentNode; // Simpan parent asal
+
+        // Pindahkan legend masuk ke dalam canvas-wrap sementara waktu untuk diexport
+        wrap.appendChild(legendEl);
 
         // 1. Ukur lebar asli legenda terlebih dahulu
         legendEl.style.cssText =
@@ -2319,10 +2307,12 @@
             .value.replace(/[^a-zA-Z0-9\s-]/g, "")
             .trim()
             .replace(/\s+/g, "_") || "Bagan_AMDAL";
+
         const btnPng = document.querySelector(".btn-export-float");
         const oldText = btnPng.innerText;
         btnPng.innerText = "Memproses...";
         btnPng.disabled = true;
+
         html2canvas(wrap, {
           scale: 3,
           backgroundColor: bgIn.value,
@@ -2349,6 +2339,7 @@
             wrap.scrollLeft = osl;
             wrap.scrollTop = ost;
             legendEl.style.cssText = originalLegendCSS;
+            legendParent.appendChild(legendEl); // Kembalikan ke luar wrap
             btnPng.innerText = oldText;
             btnPng.disabled = false;
             currentZoom = oldZoom;
@@ -2363,6 +2354,7 @@
             alert("Gagal export PNG.");
             wrap.setAttribute("style", originalStyle);
             legendEl.style.cssText = originalLegendCSS;
+            legendParent.appendChild(legendEl); // Kembalikan ke luar wrap
             btnPng.innerText = oldText;
             btnPng.disabled = false;
             currentZoom = oldZoom;
