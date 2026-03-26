@@ -125,10 +125,19 @@
         box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4);
       }
 
+      /* Hero Image & Carousel CSS */
       .hero-image {
         flex: 1;
         display: flex;
         justify-content: flex-end;
+      }
+
+      .carousel-container {
+        position: relative;
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
       }
 
       .hero-image img {
@@ -137,11 +146,45 @@
         border-radius: 20px;
         box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
         cursor: pointer;
-        transition: transform 0.3s ease;
+        /* Tambahkan transisi opacity agar efek pergantian gambar halus */
+        transition:
+          opacity 0.4s ease-in-out,
+          transform 0.3s ease;
       }
 
       .hero-image img:hover {
         transform: scale(1.03);
+      }
+
+      .hero-image img.fade-out {
+        opacity: 0.2;
+      }
+
+      .carousel-dots {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 20px;
+      }
+
+      .dot {
+        width: 12px;
+        height: 12px;
+        background-color: #cbd5e1;
+        border-radius: 50%;
+        cursor: pointer;
+        transition:
+          background-color 0.3s ease,
+          transform 0.2s ease;
+      }
+
+      .dot:hover {
+        transform: scale(1.2);
+      }
+
+      .dot.active {
+        background-color: var(--primary);
+        transform: scale(1.2);
       }
 
       /* Lightbox CSS */
@@ -341,7 +384,7 @@
           sekarang.
         </p>
         <a href="app.html" class="btn-primary">
-          Mulai
+          Mulai Buat Bagan Alir
           <svg
             width="20"
             height="20"
@@ -358,11 +401,14 @@
         </a>
       </div>
       <div class="hero-image">
-        <img
-          id="heroImg"
-          src="assets/img/hero-img.png"
-          alt="Ilustrasi Aplikasi AMDAL"
-        />
+        <div class="carousel-container">
+          <img
+            id="heroImg"
+            src="assets/img/hero-img.png"
+            alt="Ilustrasi Aplikasi AMDAL"
+          />
+          <div class="carousel-dots" id="carouselDots"></div>
+        </div>
       </div>
     </section>
 
@@ -446,15 +492,87 @@
     </footer>
 
     <script>
+      // ==========================================
+      // LOGIKA CAROUSEL HERO IMAGE
+      // ==========================================
+      const images = [
+        "assets/img/hero-img.png",
+        "assets/img/hero-img1.png",
+        "assets/img/hero-img2.png",
+        "assets/img/hero-img3.png",
+        "assets/img/hero-img4.png",
+      ];
+
+      let currentIndex = 0;
       const heroImg = document.getElementById("heroImg");
+      const dotsContainer = document.getElementById("carouselDots");
+      let slideInterval;
+
+      // Buat elemen titik (dots)
+      images.forEach((_, index) => {
+        const dot = document.createElement("div");
+        dot.classList.add("dot");
+        if (index === 0) dot.classList.add("active");
+
+        // Event listener jika dot diklik
+        dot.addEventListener("click", () => goToSlide(index));
+        dotsContainer.appendChild(dot);
+      });
+
+      const dots = document.querySelectorAll(".dot");
+
+      // Fungsi mengganti gambar dengan transisi
+      function changeImage(index) {
+        heroImg.classList.add("fade-out"); // Tambahkan kelas pudar
+
+        // Ganti src saat gambar sedang memudar (sinkron dengan waktu CSS 0.4s)
+        setTimeout(() => {
+          heroImg.src = images[index];
+          updateDots(index);
+          heroImg.classList.remove("fade-out"); // Tampilkan gambar baru
+        }, 400);
+      }
+
+      function nextSlide() {
+        currentIndex = (currentIndex + 1) % images.length;
+        changeImage(currentIndex);
+      }
+
+      function goToSlide(index) {
+        if (currentIndex === index) return;
+        currentIndex = index;
+        changeImage(currentIndex);
+        resetInterval(); // Ulangi timer agar tidak langsung ganti lagi
+      }
+
+      function updateDots(index) {
+        dots.forEach((dot) => dot.classList.remove("active"));
+        dots[index].classList.add("active");
+      }
+
+      // Timer pergantian slide (4 detik = 4000ms)
+      function startInterval() {
+        slideInterval = setInterval(nextSlide, 4000);
+      }
+
+      function resetInterval() {
+        clearInterval(slideInterval);
+        startInterval();
+      }
+
+      startInterval();
+
+      // ==========================================
+      // LOGIKA LIGHTBOX (Bawaan)
+      // ==========================================
       const lightbox = document.getElementById("imageLightbox");
       const lightboxImg = document.getElementById("lightboxImg");
       const closeBtn = document.querySelector(".lightbox-close");
 
-      // Tampilkan popup saat gambar diklik
+      // Tampilkan popup saat gambar diklik (menggunakan src yang aktif saat ini)
       heroImg.addEventListener("click", function () {
         lightbox.classList.add("show");
-        lightboxImg.src = this.src; // Menyalin path gambar
+        lightboxImg.src = this.src;
       });
 
       // Tutup popup saat tombol silang (X) diklik
