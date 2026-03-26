@@ -2251,6 +2251,8 @@
         const oldZoom = currentZoom;
         currentZoom = 1;
         applyZoom();
+
+        // 1. Hitung Bounding Box Kotak (Nodes)
         let minX = Infinity,
           maxX = 0,
           maxY = 0;
@@ -2271,36 +2273,53 @@
 
         const legendEl = document.querySelector(".canvas-legend");
         const originalLegendCSS = legendEl.style.cssText;
-        const legendParent = legendEl.parentNode; // Simpan parent asal
+        const legendParent = legendEl.parentNode;
 
         // Pindahkan legend masuk ke dalam canvas-wrap sementara waktu untuk diexport
         wrap.appendChild(legendEl);
 
-        // 1. Ukur lebar asli legenda terlebih dahulu
+        // 2. Ukur lebar asli legenda terlebih dahulu
         legendEl.style.cssText =
           originalLegendCSS +
           "; position:absolute !important; display:flex !important; flex-wrap:nowrap !important; white-space:nowrap !important; width:max-content !important; visibility:hidden !important;";
         const idealLegendWidth = legendEl.offsetWidth;
 
-        // 2. Pastikan lebar kanvas cukup mengakomodasi kotak ATAU legenda (mana yang lebih lebar)
-        const chartWidth = Math.max(800, maxX + 100, idealLegendWidth + 60);
+        // 3. Pastikan lebar kanvas cukup mengakomodasi lebar bagan (node) ATAU legenda (tergantung mana yang lebih lebar)
+        const nodeW = maxX - minX;
+        const chartWidth = Math.max(800, nodeW + 100, idealLegendWidth + 60);
 
-        // 3. Pusatkan legenda di tengah-tengah kanvas export (bukan mengikuti kumpulan node)
+        // 4. Hitung titik tengah hasil canvas
         const chartCenter = chartWidth / 2;
         let legendStyle =
           chartWidth >= idealLegendWidth
             ? "; position:absolute !important; display:flex !important; flex-wrap:nowrap !important; white-space:nowrap !important; width:max-content !important; align-items:center !important; justify-content:center !important; padding:10px 20px !important;"
             : `; position:absolute !important; display:flex !important; flex-wrap:wrap !important; white-space:normal !important; width:${chartWidth - 40}px !important; align-items:center !important; justify-content:center !important; padding:10px 20px !important; text-align:center !important;`;
+
         legendEl.style.cssText = originalLegendCSS + legendStyle;
+        const legendActualWidth = legendEl.offsetWidth; // Ambil ukuran real setelah setting style
         const legendHeight = legendEl.offsetHeight;
+
         const finalHeight = maxY + 50 + legendHeight + 50;
+
+        // --- PUSATKAN BAGAN ALIR (NODES) ---
+        // Hitung pergeseran X agar titik tengah bagan tepat berada di tengah chartWidth
+        const nodesCenter = (minX + maxX) / 2;
+        const shiftX = chartCenter - nodesCenter;
+
+        // Geser wrapper dalam secara sementara (Translate)
+        inner.style.transform = `scale(1) translateX(${shiftX}px)`;
+
+        // --- PUSATKAN LEGENDA ---
         legendEl.style.top = maxY + 50 + "px";
-        legendEl.style.left = chartCenter + "px";
-        legendEl.style.transform = "translateX(-50%)";
+        // Gunakan nilai px mutlak daripada transform(-50%) agar posisi lebih akurat saat di-export html2canvas
+        legendEl.style.left = chartCenter - legendActualWidth / 2 + "px";
+        legendEl.style.transform = "none";
+
         const originalStyle = wrap.getAttribute("style") || "";
         const osl = wrap.scrollLeft,
           ost = wrap.scrollTop;
         wrap.style.cssText = `position:absolute;top:0;left:0;width:${chartWidth}px;height:${finalHeight}px;overflow:visible;z-index:9999`;
+
         const safeTitle =
           document
             .getElementById("project_title")
@@ -2335,15 +2354,19 @@
           },
         })
           .then((canvas) => {
+            // Restore original state
             wrap.setAttribute("style", originalStyle);
             wrap.scrollLeft = osl;
             wrap.scrollTop = ost;
             legendEl.style.cssText = originalLegendCSS;
-            legendParent.appendChild(legendEl); // Kembalikan ke luar wrap
+            legendParent.appendChild(legendEl);
             btnPng.innerText = oldText;
             btnPng.disabled = false;
+
+            // applyZoom() otomatis akan mengembalikan translateX() seperti semula
             currentZoom = oldZoom;
             applyZoom();
+
             const link = document.createElement("a");
             link.download = safeTitle + "_HD.png";
             link.href = canvas.toDataURL("image/png");
@@ -2354,9 +2377,10 @@
             alert("Gagal export PNG.");
             wrap.setAttribute("style", originalStyle);
             legendEl.style.cssText = originalLegendCSS;
-            legendParent.appendChild(legendEl); // Kembalikan ke luar wrap
+            legendParent.appendChild(legendEl);
             btnPng.innerText = oldText;
             btnPng.disabled = false;
+
             currentZoom = oldZoom;
             applyZoom();
           });
