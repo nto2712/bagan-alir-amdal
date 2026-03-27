@@ -2085,7 +2085,8 @@
       }
 
       // ── SAVE / LOAD / EXPORT ────────────────────────────────────────────
-      function saveProject() {
+      async function saveProject() {
+        // 1. Siapkan data yang akan disimpan
         const d = {
           title: document.getElementById("project_title").value,
           settings: {
@@ -2102,15 +2103,52 @@
           positions: nodePositions,
           conns: connData,
         };
-        const a = document.createElement("a");
-        a.href =
-          "data:text/json;charset=utf-8," +
-          encodeURIComponent(JSON.stringify(d, null, 2));
-        a.download =
+
+        const jsonString = JSON.stringify(d, null, 2);
+        const defaultFileName =
           (d.title.replace(/[^a-z0-9]/gi, "_").toLowerCase() || "amdal") +
           "_" +
           Date.now() +
           ".json";
+
+        // 2. Coba gunakan File System Access API (memunculkan dialog Save As)
+        if (window.showSaveFilePicker) {
+          try {
+            const handle = await window.showSaveFilePicker({
+              suggestedName: defaultFileName,
+              types: [
+                {
+                  description: "JSON File",
+                  accept: { "application/json": [".json"] },
+                },
+              ],
+            });
+            const writable = await handle.createWritable();
+            await writable.write(jsonString);
+            await writable.close();
+            // alert("Proyek berhasil disimpan!"); // Opsional: hilangkan komentar jika ingin ada notifikasi
+            return; // Sukses menyimpan, keluar dari fungsi
+          } catch (err) {
+            // Abaikan jika error terjadi karena user menekan "Cancel" pada jendela dialog
+            if (err.name !== "AbortError") {
+              console.error("Gagal menggunakan showSaveFilePicker:", err);
+              // Jika error lain, coba gunakan fallback
+              fallbackSaveProject(jsonString, defaultFileName);
+            }
+            return;
+          }
+        }
+
+        // 3. Fallback (Cadangan) untuk browser yang belum mendukung (misal: Firefox)
+        fallbackSaveProject(jsonString, defaultFileName);
+      }
+
+      // Fungsi cadangan menggunakan metode a.download lama
+      function fallbackSaveProject(jsonString, fileName) {
+        const a = document.createElement("a");
+        a.href =
+          "data:text/json;charset=utf-8," + encodeURIComponent(jsonString);
+        a.download = fileName;
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -3156,12 +3194,12 @@
 
         const tabelTop5Kegiatan = `<div class="summary-card" style="margin-bottom: 24px; border: 2px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
           <div class="summary-card-title accordion-header" onclick="toggleAccordion(this)" style="margin: 0; border: none; border-bottom: 1px solid #e2e8f0; background: #fff;">
-            📋 5 Besar Kegiatan Paling Berdampak
+            📋 Kegiatan Paling Berdampak 
           </div>
           <div class="accordion-content" style="padding: 0;">
             <div style="overflow-x: auto; padding: 10px;">
               <table class="sumtable">
-                <thead><tr><th class="num" style="width:40px">Rank</th><th>Nama Kegiatan</th><th class="num" style="width:100px">Total Dampak</th><th>Komponen Lingkungan Terdampak</th><th>Rincian Sifat Dampak</th></tr></thead>
+                <thead><tr><th class="num" style="width:40px">NO</th><th>Nama Kegiatan</th><th class="num" style="width:100px">Jumlah Dampak</th><th>Komponen Lingkungan Terdampak</th><th>Rincian Sifat Dampak</th></tr></thead>
                 <tbody>${top5KegiatanHtml || '<tr><td colspan="5" class="num">Tidak ada data</td></tr>'}</tbody>
               </table>
             </div>
@@ -3200,12 +3238,12 @@
 
         const tabelTop5Komponen = `<div class="summary-card" style="margin-bottom: 24px; border: 2px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
           <div class="summary-card-title accordion-header" onclick="toggleAccordion(this)" style="margin: 0; border: none; border-bottom: 1px solid #e2e8f0; background: #fff;">
-            📋 5 Besar Komponen Lingkungan Terdampak
+            📋 Komponen Lingkungan Paling Terdampak
           </div>
           <div class="accordion-content" style="padding: 0;">
             <div style="overflow-x: auto; padding: 10px;">
               <table class="sumtable">
-                <thead><tr><th class="num" style="width:40px">Rank</th><th>Komponen Lingkungan</th><th class="num" style="width:100px">Frekuensi Dampak</th><th>Sumber Dampak</th><th>Rincian Sifat Dampak</th></tr></thead>
+                <thead><tr><th class="num" style="width:40px">NO</th><th>Komponen Lingkungan</th><th class="num" style="width:100px">Jumlah Dampak</th><th>Sumber Dampak</th><th>Rincian Sifat Dampak</th></tr></thead>
                 <tbody>${top5KomponenHtml || '<tr><td colspan="5" class="num">Tidak ada data</td></tr>'}</tbody>
               </table>
             </div>
