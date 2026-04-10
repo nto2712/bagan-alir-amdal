@@ -489,12 +489,63 @@
         background: transparent;
       }
 
+      /* Sub-Tab Bar */
+      .sub-tab-bar {
+        display: flex;
+        background: #f8fafc;
+        border-bottom: 1px solid #cbd5e1;
+        overflow-x: auto;
+        flex-shrink: 0;
+        z-index: 1400;
+      }
+      .sub-tab-btn {
+        padding: 8px 16px;
+        font-size: 0.85em;
+        font-weight: 600;
+        color: #64748b;
+        background: transparent;
+        border: none;
+        border-right: 1px solid #e2e8f0;
+        border-bottom: 2px solid transparent;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: all 0.2s;
+        border-radius: 0;
+      }
+      .sub-tab-btn:hover:not(.active) {
+        background: #e2e8f0;
+        color: #334155;
+      }
+      .sub-tab-btn.active {
+        background: #ffffff;
+        color: #2563eb;
+        border-bottom-color: #2563eb;
+      }
+      .btn-add-sub-tab {
+        padding: 8px 16px;
+        background: transparent;
+        color: #64748b;
+        border: none;
+        font-weight: bold;
+        font-size: 1.1em;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s;
+        border-radius: 0;
+      }
+      .btn-add-sub-tab:hover {
+        background: #e2e8f0;
+        color: #334155;
+      }
+
       /* Tab panels */
       .tab-panel {
         display: none;
         flex: 1;
         overflow: hidden;
-        position: relative; /* DITAMBAHKAN AGAR FLOATING BERHASIL */
+        position: relative;
       }
       .tab-panel.active {
         display: flex;
@@ -630,6 +681,7 @@
         stroke-linecap: square;
         pointer-events: stroke;
         cursor: default;
+        transition: opacity 0.3s ease;
       }
       .conn-path.selected {
         stroke-width: 3;
@@ -702,6 +754,7 @@
         justify-content: center;
         resize: both;
         overflow: hidden;
+        transition: opacity 0.3s ease;
       }
       .node::-webkit-resizer {
         background: transparent;
@@ -1038,8 +1091,11 @@
         #btn-toggle-sidebar,
         .zoom-controls,
         .tab-bar,
+        .sub-tab-bar,
         .btn-export-chart,
-        .btn-export-float {
+        .btn-export-float,
+        .btn-filter-float,
+        #canvas-filter-widget {
           display: none !important;
         }
         #main-right {
@@ -1128,6 +1184,34 @@
       }
       .btn-export-chart:hover {
         background: #e2e8f0;
+      }
+
+      /* Tombol Filter Tambahan di Canvas */
+      .btn-filter-float {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        z-index: 201;
+        background: #3b82f6;
+        color: white;
+        padding: 10px 16px;
+        border-radius: 8px;
+        border: none;
+        font-weight: 600;
+        font-size: 1em;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .btn-filter-float:hover {
+        background: #2563eb;
+        transform: translateY(-2px);
+      }
+      .btn-filter-float:active {
+        transform: translateY(0);
       }
     </style>
   </head>
@@ -1563,11 +1647,12 @@
           <b>Edit Bagan Alir:</b><br />
           <b>Klik Kotak</b>: Pilih &nbsp;|&nbsp; <b>Ctrl+Klik</b>:
           Multi-seleksi<br />
-          <b>Drag Kotak</b>: Geser &nbsp;|&nbsp; <b>Shift+Drag</b>: Geser
+          <b>Drag Kotak</b>: Geser &nbsp;|&nbsp; <b>Shift+Drag Kotak</b>: Geser
           lurus<br />
-          <b>Drag di kanvas kosong</b>: Lasso seleksi<br />
           <b>Keyboard Panah</b>: Geser kotak terpilih<br />
-          <b>Klik Panah</b>: Edit jalur & label<br /><br />
+          <b>Drag di kanvas kosong</b>: Lasso seleksi<br />
+          <b>Klik Panah</b>: Edit jalur & label<br />
+          <b>Shift+Drag Panah</b>: Geser Tanpa Snapping<br /><br />
           <b>Copyright:</b> nto
         </div>
       </div>
@@ -1600,9 +1685,34 @@
       </div>
 
       <div class="tab-panel active" id="tab-canvas">
+        <div class="sub-tab-bar" id="sub-tab-bar-container"></div>
+
         <button class="btn-export-float" onclick="exportPNG()">
           📥 Export PNG
         </button>
+
+        <button class="btn-filter-float" onclick="toggleCanvasFilterWidget()">
+          🎛️ Filter Bagan
+        </button>
+
+        <div
+          id="canvas-filter-widget"
+          style="
+            position: absolute;
+            bottom: 75px;
+            right: 20px;
+            z-index: 200;
+            background: white;
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            padding: 20px;
+            display: none;
+            width: 340px;
+            max-height: 70vh;
+            overflow-y: auto;
+          "
+        ></div>
 
         <div class="zoom-controls">
           <button onclick="changeZoom(-0.05)" title="Zoom Out">➖</button>
@@ -1715,20 +1825,62 @@
       //  STATE & UTILS
       // ════════════════════════════════════════════════════════════════════
       let state = [];
-      let nodePositions = {};
-      let connData = {};
-      let currentZoom = 1;
-      let customLegends = [];
 
-      // Daftarkan Custom Positioner untuk Tooltip Bar Chart
+      // FITUR SUB TAB (Bagan Alir Multi Versi beserta legend & filternya)
+      let flowcharts = [
+        {
+          name: "Bagan Alir 1",
+          positions: {},
+          conns: {},
+          customLegends: [],
+          filters: { tahap: null, kegiatan: null, labels: null, opacity: 0.08 },
+          zoom: 1,
+          scrollX: 0,
+          scrollY: 0,
+        },
+      ];
+      let currentFlowchartIndex = 0;
+      let nodePositions = flowcharts[0].positions;
+      let connData = flowcharts[0].conns;
+
+      // GLOBAL FILTER STATES (Supaya Canvas & Summary Ekslusif)
+      let currentMainTab = "canvas";
+      let summaryFilters = { tahap: null, kegiatan: null, labels: null };
+
+      function getCanvasFilters() {
+        if (!flowcharts[currentFlowchartIndex].filters) {
+          flowcharts[currentFlowchartIndex].filters = {
+            tahap: null,
+            kegiatan: null,
+            labels: null,
+            opacity: 0.08,
+          };
+        }
+        return flowcharts[currentFlowchartIndex].filters;
+      }
+
+      function getCurrentTabFilters() {
+        if (currentMainTab === "summary") {
+          return summaryFilters;
+        }
+        return getCanvasFilters();
+      }
+
+      function getCustomLegends() {
+        if (!flowcharts[currentFlowchartIndex].customLegends) {
+          flowcharts[currentFlowchartIndex].customLegends = [];
+        }
+        return flowcharts[currentFlowchartIndex].customLegends;
+      }
+
+      let currentZoom = 1;
+
       Chart.Tooltip.positioners.sideEdge = function (elements, eventPosition) {
         if (!elements.length) return false;
         const chart = this.chart;
         const el = elements[0].element;
         const barWidth = el.width || 30;
 
-        // KASUS 1 BAR: Jika bar memakan lebih dari 40% lebar layar,
-        // posisikan tooltip persis di kursor (mouse) agar aman dan tidak error.
         if (barWidth > chart.width * 0.4) {
           return {
             x: eventPosition.x,
@@ -1736,7 +1888,6 @@
           };
         }
 
-        // KASUS NORMAL: Snap ke sisi tepi bar
         const isLeftHalf = el.x < chart.width / 2;
         return {
           x: isLeftHalf ? el.x + barWidth / 2 : el.x - barWidth / 2,
@@ -1750,7 +1901,6 @@
           y: eventPosition.y,
         };
       };
-      // Mengamankan input agar tidak merusak format HTML saat dirender
       function escapeHtml(text) {
         if (text === null || text === undefined) return "";
         return String(text)
@@ -1766,8 +1916,8 @@
         setTimeout(rebuildAllPaths, 300);
       }
 
-      // ── TAB SWITCHING ────────────────────────────────────────────────────
       function switchTab(tabName) {
+        currentMainTab = tabName;
         document
           .querySelectorAll(".tab-panel")
           .forEach((p) => p.classList.remove("active"));
@@ -1778,7 +1928,79 @@
         document.getElementById("tab-btn-" + tabName).classList.add("active");
         if (tabName === "summary") renderSummary();
       }
-      // ─────────────────────────────────────────────────────────────────────
+
+      // MULTI-VERSION CANVAS FUNCTIONS
+      function renderSubTabs() {
+        const container = document.getElementById("sub-tab-bar-container");
+        if (!container) return;
+        let html = "";
+        flowcharts.forEach((fc, idx) => {
+          html += `<button class="sub-tab-btn ${idx === currentFlowchartIndex ? "active" : ""}" onclick="switchSubTab(${idx})">${escapeHtml(fc.name)}</button>`;
+        });
+        html += `<button class="btn-add-sub-tab" onclick="addSubTab()" title="Tambah Versi Bagan">+</button>`;
+        container.innerHTML = html;
+      }
+
+      function switchSubTab(idx) {
+        // Simpan posisi dan koneksi versi saat ini sebelum pindah
+        flowcharts[currentFlowchartIndex].positions = nodePositions;
+        flowcharts[currentFlowchartIndex].conns = connData;
+        flowcharts[currentFlowchartIndex].zoom = currentZoom;
+        flowcharts[currentFlowchartIndex].scrollX = wrap.scrollLeft;
+        flowcharts[currentFlowchartIndex].scrollY = wrap.scrollTop;
+
+        // Pindah ke index baru
+        currentFlowchartIndex = idx;
+        nodePositions = flowcharts[currentFlowchartIndex].positions;
+        connData = flowcharts[currentFlowchartIndex].conns;
+        currentZoom =
+          flowcharts[currentFlowchartIndex].zoom !== undefined
+            ? flowcharts[currentFlowchartIndex].zoom
+            : 1;
+
+        renderSubTabs();
+        renderCustomLegendsUI();
+        renderCanvasLegends();
+        renderCanvas();
+        applyZoom();
+
+        // Restore scroll after layout stabilizes
+        setTimeout(() => {
+          wrap.scrollLeft = flowcharts[currentFlowchartIndex].scrollX || 0;
+          wrap.scrollTop = flowcharts[currentFlowchartIndex].scrollY || 0;
+        }, 100);
+
+        if (
+          document.getElementById("canvas-filter-widget") &&
+          document.getElementById("canvas-filter-widget").style.display ===
+            "block"
+        ) {
+          renderCanvasSlicerUI();
+        }
+      }
+
+      function addSubTab() {
+        const newIdx = flowcharts.length;
+
+        // Deep clone dari layout yang sedang aktif
+        const clonedPositions = JSON.parse(JSON.stringify(nodePositions));
+        const clonedConns = JSON.parse(JSON.stringify(connData));
+        const clonedLegends = JSON.parse(JSON.stringify(getCustomLegends()));
+        const clonedFilters = JSON.parse(JSON.stringify(getCanvasFilters()));
+
+        flowcharts.push({
+          name: "Bagan Alir " + (newIdx + 1),
+          positions: clonedPositions,
+          conns: clonedConns,
+          customLegends: clonedLegends,
+          filters: clonedFilters,
+          zoom: currentZoom,
+          scrollX: wrap.scrollLeft,
+          scrollY: wrap.scrollTop,
+        });
+
+        switchSubTab(newIdx);
+      }
 
       const defaultNodeColors = {
         t1: { bg: "#334155", bd: "#1e293b", c: "#ffffff" },
@@ -1793,26 +2015,25 @@
       let nodeColors = JSON.parse(JSON.stringify(defaultNodeColors));
       let selectedOrder = [];
 
-      // ── LEGENDA KUSTOM ───────────────────────────────────────────────────
       function addCustomLegend() {
         const input = document.getElementById("custom-legend-input");
         const val = input.value.trim();
         if (val) {
-          customLegends.push(val);
+          getCustomLegends().push(val);
           input.value = "";
           renderCustomLegendsUI();
           renderCanvasLegends();
         }
       }
       function removeCustomLegend(idx) {
-        customLegends.splice(idx, 1);
+        getCustomLegends().splice(idx, 1);
         renderCustomLegendsUI();
         renderCanvasLegends();
       }
       function renderCustomLegendsUI() {
         const list = document.getElementById("custom-legend-list");
         if (list)
-          list.innerHTML = customLegends
+          list.innerHTML = getCustomLegends()
             .map(
               (leg, i) => `
                 <div style="display:flex;justify-content:space-between;align-items:center;background:#f8fafc;border:1px solid #e2e8f0;padding:6px 10px;border-radius:4px;font-size:0.8em;color:#475569;">
@@ -1825,7 +2046,7 @@
       function renderCanvasLegends() {
         const container = document.getElementById("custom-legends-container");
         if (container)
-          container.innerHTML = customLegends
+          container.innerHTML = getCustomLegends()
             .map(
               (leg) =>
                 `<span style="margin-left:2px">${escapeHtml(leg)}</span>`,
@@ -1833,7 +2054,6 @@
             .join("");
       }
 
-      // ── WARNA GARIS ─────────────────────────────────────────────────────
       let traceColors = [];
 
       function countTotalKegiatan() {
@@ -1940,7 +2160,6 @@
       const fontIn = document.getElementById("conf-font");
       const zoomValEl = document.getElementById("zoom-val");
 
-      // ── ZOOM ────────────────────────────────────────────────────────────
       function applyZoom() {
         inner.style.transform = `scale(${currentZoom})`;
         zoomValEl.innerText = Math.round(currentZoom * 100) + "%";
@@ -1953,17 +2172,6 @@
         currentZoom = 1;
         applyZoom();
       }
-      // fungsi zoom in out kanvas dengan ctrl+wheel dimatikan
-      //      wrap.addEventListener(
-      //        "wheel",
-      //        (e) => {
-      //          if (e.ctrlKey || e.metaKey) {
-      //            e.preventDefault();
-      //            changeZoom(e.deltaY < 0 ? 0.05 : -0.05);
-      //          }
-      //        },
-      //        { passive: false },
-      //      );
 
       const nodeResizeObserver = window.ResizeObserver
         ? new ResizeObserver((entries) => {
@@ -2061,7 +2269,6 @@
         }
       }
 
-      // ── COLOR CUSTOMIZATION ─────────────────────────────────────────────
       function applyNodeColors() {
         const rs = document.documentElement.style;
         for (let key in nodeColors) {
@@ -2084,9 +2291,14 @@
         applyNodeColors();
       }
 
-      // ── SAVE / LOAD / EXPORT ────────────────────────────────────────────
       async function saveProject() {
-        // 1. Siapkan data yang akan disimpan
+        // Paksa simpan state sub-tab yang sedang aktif
+        flowcharts[currentFlowchartIndex].positions = nodePositions;
+        flowcharts[currentFlowchartIndex].conns = connData;
+        flowcharts[currentFlowchartIndex].zoom = currentZoom;
+        flowcharts[currentFlowchartIndex].scrollX = wrap.scrollLeft;
+        flowcharts[currentFlowchartIndex].scrollY = wrap.scrollTop;
+
         const d = {
           title: document.getElementById("project_title").value,
           settings: {
@@ -2097,11 +2309,13 @@
             labelDist: document.getElementById("conf-label-dist").value,
             nodeColors,
             traceColors,
-            customLegends,
+            customLegends: getCustomLegends(),
+            filterOpacity: getCanvasFilters().opacity,
+            summaryFilters: summaryFilters,
           },
           data: state,
-          positions: nodePositions,
-          conns: connData,
+          flowcharts: flowcharts,
+          currentFlowchartIndex: currentFlowchartIndex,
         };
 
         const jsonString = JSON.stringify(d, null, 2);
@@ -2111,7 +2325,6 @@
           Date.now() +
           ".json";
 
-        // 2. Coba gunakan File System Access API (memunculkan dialog Save As)
         if (window.showSaveFilePicker) {
           try {
             const handle = await window.showSaveFilePicker({
@@ -2126,24 +2339,18 @@
             const writable = await handle.createWritable();
             await writable.write(jsonString);
             await writable.close();
-            // alert("Proyek berhasil disimpan!"); // Opsional: hilangkan komentar jika ingin ada notifikasi
-            return; // Sukses menyimpan, keluar dari fungsi
+            return;
           } catch (err) {
-            // Abaikan jika error terjadi karena user menekan "Cancel" pada jendela dialog
             if (err.name !== "AbortError") {
               console.error("Gagal menggunakan showSaveFilePicker:", err);
-              // Jika error lain, coba gunakan fallback
               fallbackSaveProject(jsonString, defaultFileName);
             }
             return;
           }
         }
-
-        // 3. Fallback (Cadangan) untuk browser yang belum mendukung (misal: Firefox)
         fallbackSaveProject(jsonString, defaultFileName);
       }
 
-      // Fungsi cadangan menggunakan metode a.download lama
       function fallbackSaveProject(jsonString, fileName) {
         const a = document.createElement("a");
         a.href =
@@ -2164,6 +2371,11 @@
             if (d.title)
               document.getElementById("project_title").value = d.title;
             if (d.settings) {
+              if (d.settings.summaryFilters) {
+                summaryFilters = d.settings.summaryFilters;
+              } else {
+                summaryFilters = { tahap: null, kegiatan: null, labels: null };
+              }
               if (d.settings.bgColor) {
                 bgIn.value = d.settings.bgColor;
                 inner.style.backgroundColor = d.settings.bgColor;
@@ -2196,16 +2408,76 @@
                 d.settings.traceColors.length > 0
                   ? d.settings.traceColors
                   : [];
-              customLegends = d.settings.customLegends || [];
-              renderCustomLegendsUI();
-              renderCanvasLegends();
             }
             if (d.data) {
               state = d.data;
-              nodePositions = d.positions || {};
-              connData = d.conns || {};
+
+              if (d.flowcharts) {
+                flowcharts = d.flowcharts;
+                currentFlowchartIndex = d.currentFlowchartIndex || 0;
+
+                // Backward compatibility untuk file lama yang tidak punya filter/legend/zoom/scroll per tab
+                flowcharts.forEach((fc) => {
+                  if (!fc.customLegends)
+                    fc.customLegends = d.settings?.customLegends
+                      ? [...d.settings.customLegends]
+                      : [];
+                  if (!fc.filters)
+                    fc.filters = {
+                      tahap: null,
+                      kegiatan: null,
+                      labels: null,
+                      opacity:
+                        d.settings?.filterOpacity !== undefined
+                          ? parseFloat(d.settings.filterOpacity)
+                          : 0.08,
+                    };
+                  if (fc.zoom === undefined) fc.zoom = 1;
+                  if (fc.scrollX === undefined) fc.scrollX = 0;
+                  if (fc.scrollY === undefined) fc.scrollY = 0;
+                });
+              } else {
+                // Backward compatibility untuk versi paling lama
+                flowcharts = [
+                  {
+                    name: "Bagan Alir 1",
+                    positions: d.positions || {},
+                    conns: d.conns || {},
+                    customLegends: d.settings?.customLegends || [],
+                    filters: {
+                      tahap: null,
+                      kegiatan: null,
+                      labels: null,
+                      opacity:
+                        d.settings?.filterOpacity !== undefined
+                          ? parseFloat(d.settings.filterOpacity)
+                          : 0.08,
+                    },
+                    zoom: 1,
+                    scrollX: 0,
+                    scrollY: 0,
+                  },
+                ];
+                currentFlowchartIndex = 0;
+              }
+
+              nodePositions = flowcharts[currentFlowchartIndex].positions;
+              connData = flowcharts[currentFlowchartIndex].conns;
+              currentZoom = flowcharts[currentFlowchartIndex].zoom;
+
+              renderCustomLegendsUI();
+              renderCanvasLegends();
               renderInputs();
+              renderSubTabs();
               renderCanvas();
+              applyZoom();
+
+              setTimeout(() => {
+                wrap.scrollLeft =
+                  flowcharts[currentFlowchartIndex].scrollX || 0;
+                wrap.scrollTop = flowcharts[currentFlowchartIndex].scrollY || 0;
+              }, 150);
+
               alert("Project berhasil dimuat!");
             }
           } catch (err) {
@@ -2221,20 +2493,47 @@
         if (!confirm("Hapus semua data dan warna akan kembali default?"))
           return;
         state = [];
-        nodePositions = {};
-        connData = {};
+
+        flowcharts = [
+          {
+            name: "Bagan Alir 1",
+            positions: {},
+            conns: {},
+            customLegends: [],
+            filters: {
+              tahap: null,
+              kegiatan: null,
+              labels: null,
+              opacity: 0.08,
+            },
+            zoom: 1,
+            scrollX: 0,
+            scrollY: 0,
+          },
+        ];
+        currentFlowchartIndex = 0;
+        nodePositions = flowcharts[0].positions;
+        connData = flowcharts[0].conns;
+        summaryFilters = { tahap: null, kegiatan: null, labels: null };
+
         selectedOrder = [];
         document.getElementById("project_title").value = "Proyek Baru";
         nodeColors = JSON.parse(JSON.stringify(defaultNodeColors));
         traceColors = [];
-        customLegends = [];
+
         resetZoom();
+        setTimeout(() => {
+          wrap.scrollLeft = 0;
+          wrap.scrollTop = 0;
+        }, 100);
+
         applyNodeColors();
         loadNodeColorPickers();
         renderTraceColorGrid();
         renderInputs();
         renderCustomLegendsUI();
         renderCanvasLegends();
+        renderSubTabs();
         renderCanvas();
       }
 
@@ -2293,6 +2592,7 @@
           maxX = 0,
           maxY = 0;
         document.querySelectorAll(".node").forEach((n) => {
+          if (n.style.pointerEvents === "none") return;
           const x = parseFloat(n.style.left) || 0,
             y = parseFloat(n.style.top) || 0;
           const right = x + n.offsetWidth,
@@ -2309,21 +2609,17 @@
 
         const legendEl = document.querySelector(".canvas-legend");
         const originalLegendCSS = legendEl.style.cssText;
-        const legendParent = legendEl.parentNode; // Simpan parent asal
+        const legendParent = legendEl.parentNode;
 
-        // Pindahkan legend masuk ke dalam canvas-wrap sementara waktu untuk diexport
         wrap.appendChild(legendEl);
 
-        // 1. Ukur lebar asli legenda terlebih dahulu
         legendEl.style.cssText =
           originalLegendCSS +
           "; position:absolute !important; display:flex !important; flex-wrap:nowrap !important; white-space:nowrap !important; width:max-content !important; visibility:hidden !important;";
         const idealLegendWidth = legendEl.offsetWidth;
 
-        // 2. Pastikan lebar kanvas cukup mengakomodasi kotak ATAU legenda (mana yang lebih lebar)
         const chartWidth = Math.max(800, maxX + 100, idealLegendWidth + 60);
 
-        // 3. Pusatkan legenda di tengah-tengah kanvas export (bukan mengikuti kumpulan node)
         const chartCenter = chartWidth / 2;
         let legendStyle =
           chartWidth >= idealLegendWidth
@@ -2367,7 +2663,10 @@
             return (
               el.classList.contains("zoom-controls") ||
               el.classList.contains("btn-export-float") ||
+              el.classList.contains("btn-filter-float") ||
+              el.classList.contains("sub-tab-bar") ||
               el.id === "hint" ||
+              el.id === "canvas-filter-widget" ||
               el.classList.contains("tab-bar")
             );
           },
@@ -2377,7 +2676,7 @@
             wrap.scrollLeft = osl;
             wrap.scrollTop = ost;
             legendEl.style.cssText = originalLegendCSS;
-            legendParent.appendChild(legendEl); // Kembalikan ke luar wrap
+            legendParent.appendChild(legendEl);
             btnPng.innerText = oldText;
             btnPng.disabled = false;
             currentZoom = oldZoom;
@@ -2392,7 +2691,7 @@
             alert("Gagal export PNG.");
             wrap.setAttribute("style", originalStyle);
             legendEl.style.cssText = originalLegendCSS;
-            legendParent.appendChild(legendEl); // Kembalikan ke luar wrap
+            legendParent.appendChild(legendEl);
             btnPng.innerText = oldText;
             btnPng.disabled = false;
             currentZoom = oldZoom;
@@ -2467,9 +2766,34 @@
               });
             });
             state = newState;
-            nodePositions = {};
-            connData = {};
+
+            // Reset Layout for Import
+            flowcharts = [
+              {
+                name: "Bagan Alir 1",
+                positions: {},
+                conns: {},
+                customLegends: [],
+                filters: {
+                  tahap: null,
+                  kegiatan: null,
+                  labels: null,
+                  opacity: 0.08,
+                },
+                zoom: 1,
+                scrollX: 0,
+                scrollY: 0,
+              },
+            ];
+            currentFlowchartIndex = 0;
+            nodePositions = flowcharts[0].positions;
+            connData = flowcharts[0].conns;
+            summaryFilters = { tahap: null, kegiatan: null, labels: null };
+
+            renderCustomLegendsUI();
+            renderCanvasLegends();
             renderInputs();
+            renderSubTabs();
             renderCanvas();
             alert("Data berhasil diimport!");
           } catch (err) {
@@ -2481,7 +2805,6 @@
         r.readAsArrayBuffer(f);
       }
 
-      // ── FORM INPUTS ─────────────────────────────────────────────────────
       function addT1() {
         state.push({ id: Date.now(), text: "Tahap Baru", t2: [] });
         renderInputs();
@@ -2561,48 +2884,38 @@
       }
 
       // ════════════════════════════════════════════════════════════════════
-      //  TABEL RINGKASAN & CHART (DENGAN SLICER)
+      //  TABEL RINGKASAN, CHART & KONTROL FILTER (SLICER)
       // ════════════════════════════════════════════════════════════════════
-      let activeTahapFilter = null;
-      let activeKegiatanFilter = null;
-      let activeLabelsFilter = null; // null = Tampilkan Semua
-      let chartInstances = []; // Menyimpan instance chart agar bisa di-destroy
+      let chartInstances = [];
 
-      // Palet warna otomatis untuk label-label lain (modern & high contrast)
       const extendedChartColors = [
-        "#3b82f6", // Biru (Blue)
-        "#14b8a6", // Tosca (Teal)
-        "#ec4899", // Pink
-        "#06b6d4", // Cyan
-        "#6366f1", // Indigo
-        "#eab308", // Kuning Gelap (Yellow)
-        "#f43f5e", // Merah Muda Gelap (Rose)
-        "#84cc16", // Hijau Jeruk (Lime)
-        "#64748b", // Abu-abu Kebiruan (Slate)
-        "#d946ef", // Fuchsia
+        "#3b82f6",
+        "#14b8a6",
+        "#ec4899",
+        "#06b6d4",
+        "#6366f1",
+        "#eab308",
+        "#f43f5e",
+        "#84cc16",
+        "#64748b",
+        "#d946ef",
       ];
 
       function getLabelColorHex(lbl) {
         const l = lbl.trim().toUpperCase();
-        if (l === "TANPA LABEL") return "#cbd5e1"; // Abu-abu netral (Slate 300)
-        // 1. Pemetaan Warna Spesifik Sesuai Request (Teori Warna Modern)
-        if (l === "+P") return "#22c55e"; // Hijau Cerah (Green 500)
-        if (l === "+TP") return "#86efac"; // Hijau Redup/Soft (Green 300)
+        if (l === "TANPA LABEL") return "#cbd5e1";
+        if (l === "+P") return "#22c55e";
+        if (l === "+TP") return "#86efac";
+        if (l === "-P") return "#ef4444";
+        if (l === "-TP") return "#fca5a5";
+        if (l === "DL") return "#8b5cf6";
+        if (l === "DPH") return "#f97316";
+        if (l === "DTPHKP") return "#fb923c";
+        if (l === "DTPH") return "#fed7aa";
 
-        if (l === "-P") return "#ef4444"; // Merah Cerah (Red 500)
-        if (l === "-TP") return "#fca5a5"; // Merah Redup/Soft (Red 300)
+        if (l.startsWith("+")) return "#10b981";
+        if (l.startsWith("-")) return "#f43f5e";
 
-        if (l === "DL") return "#8b5cf6"; // Ungu (Violet 500)
-
-        if (l === "DPH") return "#f97316"; // Orange 500 (Cerah & Kuat - Paling Krusial)
-        if (l === "DTPHKP") return "#fb923c"; // Orange 400 (Menengah - Tetap butuh Pantau/Kelola)
-        if (l === "DTPH") return "#fed7aa"; // Orange 200 (Sangat Soft/Redup - Paling tidak krusial)
-
-        // 2. Fallback untuk awalan + dan - (jika ada label dinamis seperti +Lainnya)
-        if (l.startsWith("+")) return "#10b981"; // Emerald
-        if (l.startsWith("-")) return "#f43f5e"; // Rose
-
-        // 3. Otomatisasi warna berbeda untuk label sisanya
         let hash = 0;
         for (let i = 0; i < l.length; i++) {
           hash = l.charCodeAt(i) + ((hash << 5) - hash);
@@ -2610,7 +2923,8 @@
         return extendedChartColors[Math.abs(hash) % extendedChartColors.length];
       }
 
-      function calcSummaryData() {
+      function calcSummaryData(filtersArg) {
+        const filters = filtersArg || getCurrentTabFilters();
         const byTahap = {};
         const byKegiatan = {};
         const byKomponen = {};
@@ -2632,7 +2946,6 @@
           "TANPA LABEL",
         ];
 
-        // 1. Kumpulkan semua opsi untuk tombol Slicer
         state.forEach((t1) => {
           const t1Text = t1.text || "Tahap Kosong";
           allAvailableTahap.add(t1Text);
@@ -2658,19 +2971,14 @@
           });
         });
 
-        // 2. Kalkulasi Data Berdasarkan Filter yang Aktif
         state.forEach((t1) => {
           const t1Text = t1.text || "Tahap Kosong";
-          if (activeTahapFilter !== null && !activeTahapFilter.includes(t1Text))
-            return;
+          if (filters.tahap !== null && !filters.tahap.includes(t1Text)) return;
           if (!byTahap[t1Text]) byTahap[t1Text] = { total: 0, labels: {} };
 
           t1.t2.forEach((t2) => {
             const t2Text = t2.text || "Kegiatan Kosong";
-            if (
-              activeKegiatanFilter !== null &&
-              !activeKegiatanFilter.includes(t2Text)
-            )
+            if (filters.kegiatan !== null && !filters.kegiatan.includes(t2Text))
               return;
 
             const kKey = t2Text + "||" + t1Text;
@@ -2680,7 +2988,7 @@
                 kegiatan: t2Text,
                 tahap: t1Text,
                 labels: {},
-                komponenTerdampak: {}, // Track by (Comp + Label)
+                komponenTerdampak: {},
               };
 
             t2.impacts.forEach((imp) => {
@@ -2695,18 +3003,13 @@
                 if (val && val.trim()) {
                   const l =
                     lbl && lbl.trim() !== "" ? lbl.trim() : "Tanpa Label";
-                  if (
-                    activeLabelsFilter !== null &&
-                    !activeLabelsFilter.includes(l)
-                  )
+                  if (filters.labels !== null && !filters.labels.includes(l))
                     return;
 
                   const compName = val.trim();
-
                   byTahap[t1Text].total++;
                   byKegiatan[kKey].total++;
 
-                  // Perbaikan: Catat Kombinasi Komponen + Label
                   const compLabelKey = compName + "|||" + l;
                   if (!byKegiatan[kKey].komponenTerdampak[compLabelKey]) {
                     byKegiatan[kKey].komponenTerdampak[compLabelKey] = {
@@ -2726,7 +3029,6 @@
 
                   byKomponen[compName].total++;
 
-                  // Perbaikan: Catat Kombinasi Kegiatan + Label
                   const kegLabelKey = t2Text + "|||" + l;
                   if (!byKomponen[compName].kegiatanPemicu[kegLabelKey]) {
                     byKomponen[compName].kegiatanPemicu[kegLabelKey] = {
@@ -2803,63 +3105,199 @@
         };
       }
 
-      window.toggleSlicer = function (lbl) {
-        if (activeLabelsFilter === null) {
-          activeLabelsFilter = [lbl];
+      function updateActiveTabSlicers() {
+        if (currentMainTab === "summary") {
+          renderSummary();
         } else {
-          if (activeLabelsFilter.includes(lbl)) {
-            activeLabelsFilter = activeLabelsFilter.filter((x) => x !== lbl);
-            if (activeLabelsFilter.length === 0) activeLabelsFilter = null;
-          } else {
-            activeLabelsFilter.push(lbl);
+          applyCanvasFilters();
+          if (
+            document.getElementById("canvas-filter-widget") &&
+            document.getElementById("canvas-filter-widget").style.display ===
+              "block"
+          ) {
+            renderCanvasSlicerUI();
           }
         }
-        renderSummary();
+      }
+
+      window.toggleSlicer = function (lbl) {
+        const filters = getCurrentTabFilters();
+        if (filters.labels === null) {
+          filters.labels = [lbl];
+        } else {
+          if (filters.labels.includes(lbl)) {
+            filters.labels = filters.labels.filter((x) => x !== lbl);
+            if (filters.labels.length === 0) filters.labels = null;
+          } else {
+            filters.labels.push(lbl);
+          }
+        }
+        updateActiveTabSlicers();
       };
       window.resetSlicer = function () {
-        activeLabelsFilter = null;
-        renderSummary();
+        getCurrentTabFilters().labels = null;
+        updateActiveTabSlicers();
       };
 
-      // FUNGSI SLICER TAHAP
       window.toggleTahapSlicer = function (thp) {
-        if (activeTahapFilter === null) {
-          activeTahapFilter = [thp];
+        const filters = getCurrentTabFilters();
+        if (filters.tahap === null) {
+          filters.tahap = [thp];
         } else {
-          if (activeTahapFilter.includes(thp)) {
-            activeTahapFilter = activeTahapFilter.filter((x) => x !== thp);
-            if (activeTahapFilter.length === 0) activeTahapFilter = null;
+          if (filters.tahap.includes(thp)) {
+            filters.tahap = filters.tahap.filter((x) => x !== thp);
+            if (filters.tahap.length === 0) filters.tahap = null;
           } else {
-            activeTahapFilter.push(thp);
+            filters.tahap.push(thp);
           }
         }
-        renderSummary();
+        updateActiveTabSlicers();
       };
       window.resetTahapSlicer = function () {
-        activeTahapFilter = null;
-        renderSummary();
+        getCurrentTabFilters().tahap = null;
+        updateActiveTabSlicers();
       };
 
-      // FUNGSI SLICER KEGIATAN
       window.toggleKegiatanSlicer = function (keg) {
-        if (activeKegiatanFilter === null) {
-          activeKegiatanFilter = [keg];
+        const filters = getCurrentTabFilters();
+        if (filters.kegiatan === null) {
+          filters.kegiatan = [keg];
         } else {
-          if (activeKegiatanFilter.includes(keg)) {
-            activeKegiatanFilter = activeKegiatanFilter.filter(
-              (x) => x !== keg,
-            );
-            if (activeKegiatanFilter.length === 0) activeKegiatanFilter = null;
+          if (filters.kegiatan.includes(keg)) {
+            filters.kegiatan = filters.kegiatan.filter((x) => x !== keg);
+            if (filters.kegiatan.length === 0) filters.kegiatan = null;
           } else {
-            activeKegiatanFilter.push(keg);
+            filters.kegiatan.push(keg);
           }
         }
-        renderSummary();
+        updateActiveTabSlicers();
       };
       window.resetKegiatanSlicer = function () {
-        activeKegiatanFilter = null;
-        renderSummary();
+        getCurrentTabFilters().kegiatan = null;
+        updateActiveTabSlicers();
       };
+
+      window.updateFilterOpacity = function (val) {
+        const filters = getCanvasFilters();
+        filters.opacity = parseFloat(val);
+        const valEl = document.getElementById("val-filter-opacity");
+        if (valEl) valEl.innerText = Math.round(filters.opacity * 100) + "%";
+        applyCanvasFilters();
+      };
+
+      function toggleCanvasFilterWidget() {
+        const w = document.getElementById("canvas-filter-widget");
+        if (!w) return;
+        if (w.style.display === "none" || w.style.display === "") {
+          w.style.display = "block";
+          renderCanvasSlicerUI();
+        } else {
+          w.style.display = "none";
+        }
+      }
+
+      function renderCanvasSlicerUI() {
+        const w = document.getElementById("canvas-filter-widget");
+        if (!w) return;
+        const filters = getCanvasFilters();
+        const data = calcSummaryData(filters);
+        const escapeStr = (str) =>
+          String(str).replace(/'/g, "\\'").replace(/"/g, "&quot;");
+
+        let html = `<div style="font-size:0.95em; font-weight:800; color:#1e293b; margin-bottom:12px; border-bottom:2px solid #e2e8f0; padding-bottom:8px;">🎛️ Filter Bagan Alir (Slicer)</div>`;
+
+        html += `<div style="margin-bottom:12px;">
+              <div style="font-size:0.8em; color:#64748b; font-weight:700; margin-bottom:6px;">📌 Filter Tahap</div>
+              <div style="display:flex; flex-wrap:wrap; gap:5px;">
+                  <button class="slicer-btn ${filters.tahap === null ? "active" : ""}" style="padding:5px 10px; font-size:0.8em;" onclick="resetTahapSlicer()">Semua</button>
+                  ${data.allAvailableTahap.map((t) => `<button class="slicer-btn ${filters.tahap !== null && filters.tahap.includes(t) ? "active" : ""}" style="padding:5px 10px; font-size:0.8em;" onclick="toggleTahapSlicer('${escapeStr(t)}')">${escapeHtml(t)}</button>`).join("")}
+              </div>
+          </div>`;
+
+        html += `<div style="margin-bottom:12px;">
+              <div style="font-size:0.8em; color:#64748b; font-weight:700; margin-bottom:6px;">⚙️ Filter Kegiatan</div>
+              <div style="display:flex; flex-wrap:wrap; gap:5px;">
+                  <button class="slicer-btn ${filters.kegiatan === null ? "active" : ""}" style="padding:5px 10px; font-size:0.8em;" onclick="resetKegiatanSlicer()">Semua</button>
+                  ${data.allAvailableKegiatan.map((k) => `<button class="slicer-btn ${filters.kegiatan !== null && filters.kegiatan.includes(k) ? "active" : ""}" style="padding:5px 10px; font-size:0.8em;" onclick="toggleKegiatanSlicer('${escapeStr(k)}')">${escapeHtml(k)}</button>`).join("")}
+              </div>
+          </div>`;
+
+        html += `<div style="margin-bottom:8px;">
+              <div style="font-size:0.8em; color:#64748b; font-weight:700; margin-bottom:6px;">⚗️ Filter Sifat Dampak</div>
+              <div style="display:flex; flex-wrap:wrap; gap:5px;">
+                  <button class="slicer-btn ${filters.labels === null ? "active" : ""}" style="padding:5px 10px; font-size:0.8em;" onclick="resetSlicer()">Semua</button>
+                  ${data.allAvailableLabels.map((l) => `<button class="slicer-btn ${filters.labels !== null && filters.labels.includes(l) ? "active" : ""}" style="padding:5px 10px; font-size:0.8em;" onclick="toggleSlicer('${escapeStr(l)}')">${escapeHtml(l)}</button>`).join("")}
+              </div>
+          </div>`;
+
+        html += `<div style="margin-top:12px; border-top:1px solid #e2e8f0; padding-top:12px;">
+              <div style="font-size:0.8em; color:#64748b; font-weight:700; margin-bottom:6px;">👻 Transparansi Filter</div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                  <input type="range" min="0" max="1" step="0.01" value="${filters.opacity}"
+                      oninput="updateFilterOpacity(this.value)"
+                      style="flex:1; cursor:pointer;" />
+                  <span id="val-filter-opacity" style="font-size:0.85em; font-weight:bold; width:35px; text-align:right;">${Math.round(filters.opacity * 100)}%</span>
+              </div>
+          </div>`;
+
+        html += `<div style="font-size: 0.75em; color: #94a3b8; margin-top: 10px; text-align: center;">Node dan garis yang tidak masuk kriteria akan mengikuti transparansi di atas.</div>`;
+        w.innerHTML = html;
+      }
+
+      function applyCanvasFilters() {
+        const filters = getCanvasFilters();
+        const visibleNodes = new Set(["root"]);
+        const visibleConns = new Set();
+
+        Object.keys(connectors).forEach((key) => {
+          const c = connectors[key];
+          const m = c.meta;
+          if (!m) return;
+
+          if (filters.tahap && m.tahap && !filters.tahap.includes(m.tahap))
+            return;
+          if (
+            filters.kegiatan &&
+            m.kegiatan &&
+            !filters.kegiatan.includes(m.kegiatan)
+          )
+            return;
+
+          if (filters.labels && m.ds) {
+            const hasMatch = m.ds.some((lbl) => filters.labels.includes(lbl));
+            if (!hasMatch) return;
+          }
+
+          visibleConns.add(key);
+        });
+
+        visibleConns.forEach((key) => {
+          const c = connectors[key];
+          visibleNodes.add(c.srcEl.id);
+          visibleNodes.add(c.tgtEl.id);
+        });
+
+        Object.keys(connectors).forEach((key) => {
+          const c = connectors[key];
+          if (visibleConns.has(key)) {
+            c.group.style.opacity = "1";
+            c.group.style.pointerEvents = "all";
+          } else {
+            c.group.style.opacity = filters.opacity.toString();
+            c.group.style.pointerEvents = "none";
+          }
+        });
+
+        document.querySelectorAll(".node").forEach((n) => {
+          if (visibleNodes.has(n.id)) {
+            n.style.opacity = "1";
+            n.style.pointerEvents = "all";
+          } else {
+            n.style.opacity = filters.opacity.toString();
+            n.style.pointerEvents = "none";
+          }
+        });
+      }
 
       function createStackedBarChart(
         canvasId,
@@ -2876,7 +3314,6 @@
           maxBarThickness: 200,
         }));
 
-        // Plugin kustom untuk menampilkan Total di ujung atas bar
         const topTotalPlugin = {
           id: "topTotalPlugin",
           afterDatasetsDraw(chart) {
@@ -2887,15 +3324,13 @@
             } = chart;
             ctx.save();
             ctx.font = 'normal 12px "Segoe UI", Arial, sans-serif';
-            ctx.fillStyle = "#334155"; // Warna teks menyesuaikan tema
+            ctx.fillStyle = "#334155";
             ctx.textAlign = "center";
             ctx.textBaseline = "bottom";
 
-            // Hitung total nilai di setiap kategori (sumbu X)
             const totals = new Array(data.labels.length).fill(0);
             data.datasets.forEach((dataset, datasetIndex) => {
               const meta = chart.getDatasetMeta(datasetIndex);
-              // Hanya hitung dataset yang tidak di-hide (diklik dari legend)
               if (!meta.hidden) {
                 dataset.data.forEach((val, i) => {
                   totals[i] += val || 0;
@@ -2903,12 +3338,11 @@
               }
             });
 
-            // Gambar teks total
             totals.forEach((total, i) => {
               if (total > 0) {
                 const xPos = x.getPixelForValue(i);
                 const yPos = y.getPixelForValue(total);
-                ctx.fillText(total, xPos, yPos - 4); // Geser 4px ke atas agar tidak menempel
+                ctx.fillText(total, xPos, yPos - 4);
               }
             });
             ctx.restore();
@@ -2922,17 +3356,13 @@
             options: {
               responsive: true,
               maintainAspectRatio: false,
-              layout: {
-                padding: {
-                  top: 25, // Tambahkan padding atas agar teks angka tidak terpotong tepi canvas
-                },
-              },
+              layout: { padding: { top: 25 } },
               interaction: { mode: "index", intersect: false },
               plugins: {
                 tooltip: {
                   enabled: true,
-                  position: "sideEdge", // <--- Memanggil custom positioner
-                  yAlign: "center", // <--- Memaksa tooltip muncul di samping bar
+                  position: "sideEdge",
+                  yAlign: "center",
                   xAlign: function (context) {
                     const tooltip = context.tooltip;
                     if (
@@ -2941,16 +3371,10 @@
                       !tooltip.dataPoints.length
                     )
                       return "auto";
-
                     const el = tooltip.dataPoints[0].element;
                     const chart = context.chart;
                     const barWidth = el.width || 30;
-
-                    // Jika 1 bar (sangat lebar), biarkan Chart.js memosisikan otomatis
                     if (barWidth > chart.width * 0.4) return "auto";
-
-                    // Jika bar di kiri kanvas -> paksakan kotak ke arah kanan ('left')
-                    // Jika bar di kanan kanvas -> paksakan kotak ke arah kiri ('right')
                     return el.x < chart.width / 2 ? "left" : "right";
                   },
                 },
@@ -2978,7 +3402,7 @@
                 },
               },
             },
-            plugins: [topTotalPlugin], // Daftarkan plugin di sini
+            plugins: [topTotalPlugin],
           }),
         );
       }
@@ -2986,52 +3410,34 @@
       function createPieChart(canvasId, labels, dataCounts) {
         const ctx = document.getElementById(canvasId).getContext("2d");
 
-        // Plugin kustom untuk menampilkan nilai dan persentase di dalam irisan (slice)
         const doughnutLabelPlugin = {
           id: "doughnutLabelPlugin",
           afterDatasetsDraw(chart) {
             const { ctx, data } = chart;
             ctx.save();
-            ctx.font = 'bold 11px "Segoe UI", Arial, sans-serif'; // Ukuran font sedikit dikecilkan agar muat
-            ctx.fillStyle = "#ffffff"; // Teks warna putih
+            ctx.font = 'bold 11px "Segoe UI", Arial, sans-serif';
+            ctx.fillStyle = "#ffffff";
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
-
-            // Tambahkan efek bayangan tipis agar angka terbaca walau background irisan terang
             ctx.shadowColor = "rgba(0, 0, 0, 0.4)";
             ctx.shadowBlur = 3;
             ctx.shadowOffsetX = 0;
             ctx.shadowOffsetY = 1;
 
             const meta = chart.getDatasetMeta(0);
-
-            // 1. Hitung total data yang sedang tampil (mengabaikan data yang di-hide dari legend)
             let total = 0;
             meta.data.forEach((arc, i) => {
-              if (!arc.hidden) {
-                total += data.datasets[0].data[i] || 0;
-              }
+              if (!arc.hidden) total += data.datasets[0].data[i] || 0;
             });
 
-            // 2. Gambar teks ke dalam chart
             meta.data.forEach((arc, i) => {
               const val = data.datasets[0].data[i];
-              // Hanya render teks jika nilai > 0 dan arc tidak disembunyikan
               if (val > 0 && !arc.hidden) {
                 const center = arc.tooltipPosition();
-
-                // Hitung persentase
                 const percentage =
                   total > 0 ? Math.round((val / total) * 100) : 0;
-
-                // Format teks gabungan: "Jumlah (Persen%)"
-                // Pisahkan teks menjadi 2 variabel
-                const line1 = `${val}`;
-                const line2 = `(${percentage}%)`;
-
-                // Gambar menjadi 2 baris dengan menggeser koordinat Y (offset)
-                ctx.fillText(line1, center.x, center.y - 6); // Naik 6px untuk baris pertama
-                ctx.fillText(line2, center.x, center.y + 8); // Turun 8px untuk baris kedua
+                ctx.fillText(`${val}`, center.x, center.y - 6);
+                ctx.fillText(`(${percentage}%)`, center.x, center.y + 8);
               }
             });
             ctx.restore();
@@ -3064,7 +3470,6 @@
                     const tooltip = context.tooltip;
                     if (!tooltip) return "auto";
                     const chart = context.chart;
-                    // Jika kursor di paruh kiri, panah di kiri (kotak di kanan). Berlaku sebaliknya.
                     return tooltip.caretX < chart.width / 2 ? "left" : "right";
                   },
                 },
@@ -3079,23 +3484,17 @@
               },
               cutout: "55%",
             },
-            plugins: [doughnutLabelPlugin], // Daftarkan plugin di sini
+            plugins: [doughnutLabelPlugin],
           }),
         );
       }
 
-      // Fungsi untuk membuat badge ranking pada tabel
       function rankBadge(index) {
         const rank = index + 1;
-        if (rank === 1) {
-          return `<span class="rank-badge rank-1">1</span>`;
-        } else if (rank === 2) {
-          return `<span class="rank-badge rank-2">2</span>`;
-        } else if (rank === 3) {
-          return `<span class="rank-badge rank-3">3</span>`;
-        } else {
-          return `<span class="rank-badge rank-n">${rank}</span>`;
-        }
+        if (rank === 1) return `<span class="rank-badge rank-1">1</span>`;
+        if (rank === 2) return `<span class="rank-badge rank-2">2</span>`;
+        if (rank === 3) return `<span class="rank-badge rank-3">3</span>`;
+        return `<span class="rank-badge rank-n">${rank}</span>`;
       }
 
       function renderSummary() {
@@ -3103,13 +3502,14 @@
         chartInstances = [];
 
         const container = document.getElementById("summary-content");
+        const filters = summaryFilters;
 
         if (state.length === 0 || state.every((t1) => t1.t2.length === 0)) {
           container.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><div>Klik <b>Perbarui</b> atau <b>Generate Bagan</b> untuk menampilkan ringkasan.</div></div>`;
           return;
         }
 
-        const data = calcSummaryData();
+        const data = calcSummaryData(summaryFilters);
         const totalTahap = data.tahap.reduce((s, [, v]) => s + v.total, 0);
         const totalKegiatan = data.kegiatan.reduce((s, r) => s + r.total, 0);
         const totalKomponen = data.komponen.reduce(
@@ -3122,7 +3522,6 @@
         const escapeStr = (str) =>
           String(str).replace(/'/g, "\\'").replace(/"/g, "&quot;");
 
-        // ── RENDER UI SLICER ──
         let slicerHtml = `
           <div class="settings-section summary-card" style="margin-bottom: 24px;">
             <div class="accordion-header" onclick="toggleAccordion(this)" style="margin: 0; border: none; border-bottom: 1px solid #e2e8f0; background: #fff;">
@@ -3132,18 +3531,18 @@
               <div style="display: flex; flex-direction: column; gap: 8px;">
                 <div class="slicer-wrap" style="margin-bottom: 0; border: none; box-shadow: none;">
                   <span class="slicer-title">📌 Tahap:</span>
-                  <button class="slicer-btn ${activeTahapFilter === null ? "active" : ""}" onclick="resetTahapSlicer()">Semua</button>
-                  ${data.allAvailableTahap.map((t) => `<button class="slicer-btn ${activeTahapFilter !== null && activeTahapFilter.includes(t) ? "active" : ""}" onclick="toggleTahapSlicer('${escapeStr(t)}')">${escapeHtml(t)}</button>`).join("")}
+                  <button class="slicer-btn ${filters.tahap === null ? "active" : ""}" onclick="resetTahapSlicer()">Semua</button>
+                  ${data.allAvailableTahap.map((t) => `<button class="slicer-btn ${filters.tahap !== null && filters.tahap.includes(t) ? "active" : ""}" onclick="toggleTahapSlicer('${escapeStr(t)}')">${escapeHtml(t)}</button>`).join("")}
                 </div>
                 <div class="slicer-wrap" style="margin-bottom: 0; border: none; box-shadow: none;">
                   <span class="slicer-title">⚙️ Kegiatan:</span>
-                  <button class="slicer-btn ${activeKegiatanFilter === null ? "active" : ""}" onclick="resetKegiatanSlicer()">Semua</button>
-                  ${data.allAvailableKegiatan.map((k) => `<button class="slicer-btn ${activeKegiatanFilter !== null && activeKegiatanFilter.includes(k) ? "active" : ""}" onclick="toggleKegiatanSlicer('${escapeStr(k)}')">${escapeHtml(k)}</button>`).join("")}
+                  <button class="slicer-btn ${filters.kegiatan === null ? "active" : ""}" onclick="resetKegiatanSlicer()">Semua</button>
+                  ${data.allAvailableKegiatan.map((k) => `<button class="slicer-btn ${filters.kegiatan !== null && filters.kegiatan.includes(k) ? "active" : ""}" onclick="toggleKegiatanSlicer('${escapeStr(k)}')">${escapeHtml(k)}</button>`).join("")}
                 </div>
                 <div class="slicer-wrap" style="margin-bottom: 0; border: none; box-shadow: none;">
                   <span class="slicer-title">⚗️ Dampak:</span>
-                  <button class="slicer-btn ${activeLabelsFilter === null ? "active" : ""}" onclick="resetSlicer()">Semua</button>
-                  ${data.allAvailableLabels.map((l) => `<button class="slicer-btn ${activeLabelsFilter !== null && activeLabelsFilter.includes(l) ? "active" : ""}" onclick="toggleSlicer('${escapeStr(l)}')">${escapeHtml(l)}</button>`).join("")}
+                  <button class="slicer-btn ${filters.labels === null ? "active" : ""}" onclick="resetSlicer()">Semua</button>
+                  ${data.allAvailableLabels.map((l) => `<button class="slicer-btn ${filters.labels !== null && filters.labels.includes(l) ? "active" : ""}" onclick="toggleSlicer('${escapeStr(l)}')">${escapeHtml(l)}</button>`).join("")}
                 </div>
               </div>
             </div>
@@ -3156,7 +3555,6 @@
           return;
         }
 
-        // ── RENDER DATA ANALISIS TOP 5 ──
         const top5Kegiatan = data.kegiatan.slice(0, 5);
         const top5Komponen = data.komponen
           .map((x) => ({ name: x[0], ...x[1] }))
@@ -3164,7 +3562,6 @@
 
         const top5KegiatanHtml = top5Kegiatan
           .map((row, i) => {
-            // Perbaikan: Badges merender jumlah dampak untuk komponen dan label spesifik
             const komponenHtml = Object.values(row.komponenTerdampak)
               .sort((a, b) => {
                 if (a.name !== b.name) return a.name.localeCompare(b.name);
@@ -3193,9 +3590,7 @@
           .join("");
 
         const tabelTop5Kegiatan = `<div class="summary-card" style="margin-bottom: 24px; border: 2px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
-          <div class="summary-card-title accordion-header" onclick="toggleAccordion(this)" style="margin: 0; border: none; border-bottom: 1px solid #e2e8f0; background: #fff;">
-            📋 Kegiatan Paling Berdampak 
-          </div>
+          <div class="summary-card-title accordion-header" onclick="toggleAccordion(this)" style="margin: 0; border: none; border-bottom: 1px solid #e2e8f0; background: #fff;">📋 Kegiatan Paling Berdampak </div>
           <div class="accordion-content" style="padding: 0;">
             <div style="overflow-x: auto; padding: 10px;">
               <table class="sumtable">
@@ -3208,7 +3603,6 @@
 
         const top5KomponenHtml = top5Komponen
           .map((row, i) => {
-            // Perbaikan: Badges merender jumlah dampak untuk kegiatan dan label spesifik
             const kegiatanHtml = Object.values(row.kegiatanPemicu)
               .sort((a, b) => {
                 if (a.name !== b.name) return a.name.localeCompare(b.name);
@@ -3237,9 +3631,7 @@
           .join("");
 
         const tabelTop5Komponen = `<div class="summary-card" style="margin-bottom: 24px; border: 2px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
-          <div class="summary-card-title accordion-header" onclick="toggleAccordion(this)" style="margin: 0; border: none; border-bottom: 1px solid #e2e8f0; background: #fff;">
-            📋 Komponen Lingkungan Paling Terdampak
-          </div>
+          <div class="summary-card-title accordion-header" onclick="toggleAccordion(this)" style="margin: 0; border: none; border-bottom: 1px solid #e2e8f0; background: #fff;">📋 Komponen Lingkungan Paling Terdampak</div>
           <div class="accordion-content" style="padding: 0;">
             <div style="overflow-x: auto; padding: 10px;">
               <table class="sumtable">
@@ -3250,7 +3642,6 @@
           </div>
         </div>`;
 
-        // (Bagian Label Headers & Footers Tabel Standar)
         const labelHeaders = data.uniqueLabels
           .map(
             (l) =>
@@ -3279,7 +3670,6 @@
             .join("");
         };
 
-        // TABEL 1A (Tahap)
         const t1aRows = data.tahap
           .map(
             ([name, obj], i) => `
@@ -3308,7 +3698,6 @@
             </div>
           </div>`;
 
-        // TABEL 1B (Kegiatan)
         const t1bRows = data.kegiatan
           .map(
             (row, i) => `
@@ -3338,7 +3727,6 @@
             </div>
           </div>`;
 
-        // TABEL 1C (Komponen)
         const t1cRows = data.komponen
           .map(
             ([name, obj], i) => `
@@ -3367,7 +3755,6 @@
             </div>
           </div>`;
 
-        // TABEL 4 (Sifat Dampak)
         const tabel2Rows = data.label
           .map(([lbl, count], i) => {
             const hexColor = getLabelColorHex(lbl);
@@ -3396,7 +3783,6 @@
             </div>
           </div>`;
 
-        // ── INJECT KE DALAM CONTAINER ──
         container.innerHTML =
           slicerHtml +
           tabelTop5Kegiatan +
@@ -3407,12 +3793,8 @@
           tabel4 +
           `<div style="height:32px"></div>`;
 
-        // ── Inisialisasi Chart.js ──
         const dataLabels = data.uniqueLabels;
 
-        // Chart Horizontal Top 5 Dihapus Sesuai Permintaan
-
-        // Chart Original Stacked Bar Tetap Dipertahankan
         createStackedBarChart(
           "chart-tahap",
           data.tahap.map((x) => x[0]),
@@ -3500,7 +3882,7 @@
         Object.keys(connectors).forEach((oKey) => {
           if (oKey === myKey) return;
           const o = connectors[oKey];
-          if (!o || !o.pts) return;
+          if (!o || !o.pts || o.group.style.pointerEvents === "none") return;
           const op = o.pts;
           for (let i = 0; i < pts.length - 1; i++) {
             if (Math.abs(pts[i].y - pts[i + 1].y) >= 1) continue;
@@ -3573,6 +3955,7 @@
         label,
         srcOffX = 0,
         tgtOffX = 0,
+        meta = {},
       ) {
         const markerId = ensureMarker(color),
           s = getAnchor(srcEl, "bottom", srcOffX),
@@ -3696,6 +4079,7 @@
           label,
           srcOffX,
           tgtOffX,
+          meta,
         };
 
         hit.addEventListener("mousedown", (e) => {
@@ -3802,10 +4186,12 @@
           .forEach((n) => (n.style.display = "none"));
         if (c.labelHandleEl) c.labelHandleEl.style.display = "none";
         Object.keys(connectors).forEach((k) => {
-          connectors[k].hitEl.style.pointerEvents = "stroke";
-          connectors[k].pathEl.style.pointerEvents = "stroke";
-          if (connectors[k].labelEl)
-            connectors[k].labelEl.style.pointerEvents = "all";
+          if (connectors[k].group.style.pointerEvents !== "none") {
+            connectors[k].hitEl.style.pointerEvents = "stroke";
+            connectors[k].pathEl.style.pointerEvents = "stroke";
+            if (connectors[k].labelEl)
+              connectors[k].labelEl.style.pointerEvents = "all";
+          }
         });
       }
 
@@ -3821,7 +4207,6 @@
         hint.classList.remove("show");
       }
 
-      // ── LASSO ───────────────────────────────────────────────────────────
       const lassoBox = document.getElementById("lasso-box");
       let isLasso = false,
         lassoStart = { x: 0, y: 0 };
@@ -3859,11 +4244,13 @@
         lassoBox.style.width = w + "px";
         lassoBox.style.height = h + "px";
         document.querySelectorAll(".node").forEach((n) => {
+          const isVisible = n.style.pointerEvents !== "none";
           const nx = parseFloat(n.style.left) || 0,
             ny = parseFloat(n.style.top) || 0,
             nw = n.offsetWidth,
             nh = n.offsetHeight;
-          const hit = nx < x + w && nx + nw > x && ny < y + h && ny + nh > y;
+          const hit =
+            isVisible && nx < x + w && nx + nw > x && ny < y + h && ny + nh > y;
           if (hit) {
             if (!n.classList.contains("sel")) {
               n.classList.add("sel");
@@ -4038,12 +4425,12 @@
                 c.label,
                 c.srcOffX,
                 c.tgtOffX,
+                c.meta,
               )
             : refreshConn(key);
         });
       }
 
-      // ── ALIGNMENT ───────────────────────────────────────────────────────
       function alignSelected(type) {
         if (selectedOrder.length < 2)
           return alert("Pilih minimal 2 kotak (tahan Ctrl saat klik).");
@@ -4072,7 +4459,6 @@
         refreshAllConns();
       }
 
-      // ── NODE CREATION & DRAG ────────────────────────────────────────────
       let isNodeDragging = false,
         dragStartX = 0,
         dragStartY = 0,
@@ -4143,9 +4529,7 @@
         if (!isNodeDragging) return;
         let dx = (e.clientX - dragStartX) / currentZoom,
           dy = (e.clientY - dragStartY) / currentZoom;
-        if (e.shiftKey) {
-          Math.abs(dx) > Math.abs(dy) ? (dy = 0) : (dx = 0);
-        }
+        if (e.shiftKey) Math.abs(dx) > Math.abs(dy) ? (dy = 0) : (dx = 0);
         activeNodeDrags.forEach((d) => {
           d.el.style.left = `${d.il + dx}px`;
           d.el.style.top = `${d.it + dy}px`;
@@ -4194,7 +4578,7 @@
         refreshAllConns();
       });
 
-      // ── MAIN RENDER ─────────────────────────────────────────────────────
+      // ════════ MAIN RENDER ════════
       function renderCanvas() {
         deselectAll();
         Array.from(svgEl.children).forEach((c) => {
@@ -4222,6 +4606,37 @@
         }
         let hasQ = false,
           hasQi = false;
+
+        const LAYOUT = {
+          nodeWidth: 180,
+          nodeHeight: 44,
+          baseVerticalGap: 80,
+          laneSpacing: 14,
+          horizontalGap: 40,
+        };
+
+        let totalKegiatan = 0;
+        state.forEach((t1) => {
+          totalKegiatan += t1.t2.length;
+        });
+        totalKegiatan = Math.max(1, totalKegiatan);
+
+        const dynamicVerticalGap = Math.max(
+          LAYOUT.baseVerticalGap,
+          totalKegiatan * LAYOUT.laneSpacing + 30,
+        );
+        const stepY = LAYOUT.nodeHeight + dynamicVerticalGap;
+
+        const levelY = {
+          root: 40,
+          tahap: 40 + stepY,
+          kegiatan: 40 + stepY * 2,
+          p: 40 + stepY * 3,
+          s: 40 + stepY * 4,
+          t: 40 + stepY * 5,
+          q: 40 + stepY * 6,
+          qi: 40 + stepY * 7,
+        };
 
         state.forEach((t1) => {
           regConn("root", "t1_" + t1.id);
@@ -4264,14 +4679,22 @@
           const meta = { in: inTotal[uid] || 1, out: outTotal[uid] || 1 };
           const w =
             Math.max(meta.in, meta.out) > 4
-              ? 180 + (Math.max(meta.in, meta.out) - 4) * 30
-              : 180;
+              ? LAYOUT.nodeWidth + (Math.max(meta.in, meta.out) - 4) * 30
+              : LAYOUT.nodeWidth;
           const el = createNode(uid, text, cls, dx, dy, w);
           created[uid] = el;
           return el;
         }
 
-        function connect(srcEl, tgtEl, color, label = "") {
+        function connect(
+          srcEl,
+          tgtEl,
+          color,
+          label = "",
+          laneIndex = 0,
+          totalLanes = 1,
+          meta = {},
+        ) {
           if (!srcEl || !tgtEl) return;
           const si = srcEl.id,
             ti = tgtEl.id;
@@ -4279,18 +4702,37 @@
             soT = outTotal[si] || 1;
           const tiN = (inCount[ti] = (inCount[ti] || 0) + 1),
             tiT = inTotal[ti] || 1;
-          const srcW = srcEl.offsetWidth || 180,
-            tgtW = tgtEl.offsetWidth || 180;
-          let sOff = (soN / (soT + 1) - 0.5) * srcW * 0.7,
-            tOff = (tiN / (tiT + 1) - 0.5) * tgtW * 0.7;
-          const key = `${si}__${ti}__${soN}`;
-          if (connData[key]) {
-            if (connData[key].srcOffX !== undefined)
-              sOff = connData[key].srcOffX;
-            if (connData[key].tgtOffX !== undefined)
-              tOff = connData[key].tgtOffX;
+          const srcW = srcEl.offsetWidth || LAYOUT.nodeWidth,
+            tgtW = tgtEl.offsetWidth || LAYOUT.nodeWidth;
+
+          let sOff = 0,
+            tOff = 0;
+          if (si === "root" || si.startsWith("t1_") || si.startsWith("t2_")) {
+            sOff = 0;
+          } else {
+            sOff = (soN / (soT + 1) - 0.5) * srcW * 0.7;
           }
-          buildConnector(key, srcEl, tgtEl, color, label, sOff, tOff);
+          tOff = (tiN / (tiT + 1) - 0.5) * tgtW * 0.7;
+
+          const key = `${si}__${ti}__${soN}`;
+
+          if (!connData[key]) connData[key] = {};
+
+          if (connData[key].midRatio === undefined) {
+            connData[key].midRatio = (laneIndex + 1) / (totalLanes + 1);
+          }
+          if (connData[key].srcOffX !== undefined) {
+            sOff = connData[key].srcOffX;
+          } else {
+            connData[key].srcOffX = sOff;
+          }
+          if (connData[key].tgtOffX !== undefined) {
+            tOff = connData[key].tgtOffX;
+          } else {
+            connData[key].tgtOffX = tOff;
+          }
+
+          buildConnector(key, srcEl, tgtEl, color, label, sOff, tOff, meta);
         }
 
         const rootEl = createNode(
@@ -4298,9 +4740,10 @@
           document.getElementById("project_title").value,
           "n-root",
           0,
-          40,
-          220,
+          levelY.root,
+          LAYOUT.nodeWidth + 40,
         );
+
         let currentX = 50,
           g2c = 0;
 
@@ -4308,82 +4751,208 @@
           let t1StartX = currentX,
             t2Nodes = [],
             t2XPositions = [];
-          if (t1.t2.length === 0) currentX += 260;
-          else {
+
+          if (t1.t2.length === 0) {
+            currentX += LAYOUT.nodeWidth + LAYOUT.horizontalGap;
+          } else {
             t1.t2.forEach((t2) => {
-              const color = getColor(g2c++);
+              const color = getColor(g2c);
+              const currentLane = g2c;
+              g2c++;
+
               let branchXs = [];
               if (t2.impacts.length === 0) {
                 branchXs.push(currentX);
-                currentX += 260;
-              } else
+                currentX += LAYOUT.nodeWidth + LAYOUT.horizontalGap;
+              } else {
                 t2.impacts.forEach(() => {
                   branchXs.push(currentX);
-                  currentX += 220;
+                  currentX += LAYOUT.nodeWidth + LAYOUT.horizontalGap;
                 });
+              }
+
               let t2X = (branchXs[0] + branchXs[branchXs.length - 1]) / 2;
               const t2El = createNode(
                 "t2_" + t2.id,
                 t2.text,
                 "n-t2",
                 t2X,
-                310,
-                180,
+                levelY.kegiatan,
+                LAYOUT.nodeWidth,
               );
               t2Nodes.push(t2El);
               t2XPositions.push(t2X);
+
               t2.impacts.forEach((imp, j) => {
                 let impX = branchXs[j];
+                const t1Text = t1.text || "Tahap Kosong";
+                const t2Text = t2.text || "Kegiatan Kosong";
+
+                const l_p = imp.l_p?.trim() || "Tanpa Label";
+                const l_s = imp.l_s?.trim() || "Tanpa Label";
+                const l_t = imp.l_t?.trim() || "Tanpa Label";
+                const l_q = imp.l_q?.trim() || "Tanpa Label";
+                const l_qi = imp.l_qi?.trim() || "Tanpa Label";
+
+                const dsP = [];
+                if (imp.p) dsP.push(l_p);
+                if (imp.s) dsP.push(l_s);
+                if (imp.t) dsP.push(l_t);
+                if (imp.q) dsP.push(l_q);
+                if (imp.qi) dsP.push(l_qi);
+                const dsS = [];
+                if (imp.s) dsS.push(l_s);
+                if (imp.t) dsS.push(l_t);
+                if (imp.q) dsS.push(l_q);
+                if (imp.qi) dsS.push(l_qi);
+                const dsT = [];
+                if (imp.t) dsT.push(l_t);
+                if (imp.q) dsT.push(l_q);
+                if (imp.qi) dsT.push(l_qi);
+                const dsQ = [];
+                if (imp.q) dsQ.push(l_q);
+                if (imp.qi) dsQ.push(l_qi);
+                const dsQi = [];
+                if (imp.qi) dsQi.push(l_qi);
+
                 if (imp.p) {
-                  const pEl = getOrCreate(imp.p, "p", "n-p", impX, 440);
-                  connect(t2El, pEl, color, imp.l_p);
+                  const pEl = getOrCreate(imp.p, "p", "n-p", impX, levelY.p);
+                  connect(
+                    t2El,
+                    pEl,
+                    color,
+                    imp.l_p,
+                    currentLane,
+                    totalKegiatan,
+                    { type: "imp", tahap: t1Text, kegiatan: t2Text, ds: dsP },
+                  );
                   if (imp.s) {
-                    const sEl = getOrCreate(imp.s, "s", "n-s", impX, 570);
-                    connect(pEl, sEl, color, imp.l_s);
+                    const sEl = getOrCreate(imp.s, "s", "n-s", impX, levelY.s);
+                    connect(
+                      pEl,
+                      sEl,
+                      color,
+                      imp.l_s,
+                      currentLane,
+                      totalKegiatan,
+                      { type: "imp", tahap: t1Text, kegiatan: t2Text, ds: dsS },
+                    );
                     if (imp.t) {
-                      const tEl = getOrCreate(imp.t, "t", "n-t", impX, 700);
-                      connect(sEl, tEl, color, imp.l_t);
+                      const tEl = getOrCreate(
+                        imp.t,
+                        "t",
+                        "n-t",
+                        impX,
+                        levelY.t,
+                      );
+                      connect(
+                        sEl,
+                        tEl,
+                        color,
+                        imp.l_t,
+                        currentLane,
+                        totalKegiatan,
+                        {
+                          type: "imp",
+                          tahap: t1Text,
+                          kegiatan: t2Text,
+                          ds: dsT,
+                        },
+                      );
                       if (imp.q) {
-                        const qEl = getOrCreate(imp.q, "q", "n-q", impX, 830);
-                        connect(tEl, qEl, color, imp.l_q);
-                        if (imp.qi)
+                        const qEl = getOrCreate(
+                          imp.q,
+                          "q",
+                          "n-q",
+                          impX,
+                          levelY.q,
+                        );
+                        connect(
+                          tEl,
+                          qEl,
+                          color,
+                          imp.l_q,
+                          currentLane,
+                          totalKegiatan,
+                          {
+                            type: "imp",
+                            tahap: t1Text,
+                            kegiatan: t2Text,
+                            ds: dsQ,
+                          },
+                        );
+                        if (imp.qi) {
+                          const qiEl = getOrCreate(
+                            imp.qi,
+                            "qi",
+                            "n-qi",
+                            impX,
+                            levelY.qi,
+                          );
                           connect(
                             qEl,
-                            getOrCreate(imp.qi, "qi", "n-qi", impX, 960),
+                            qiEl,
                             color,
                             imp.l_qi,
+                            currentLane,
+                            totalKegiatan,
+                            {
+                              type: "imp",
+                              tahap: t1Text,
+                              kegiatan: t2Text,
+                              ds: dsQi,
+                            },
                           );
+                        }
                       }
                     }
                   }
                 }
               });
-              currentX += 40;
             });
           }
+
           let t1X =
             t2XPositions.length > 0
               ? (t2XPositions[0] + t2XPositions[t2XPositions.length - 1]) / 2
               : t1StartX;
+          const t1Text = t1.text || "Tahap Kosong";
           const t1El = createNode(
             "t1_" + t1.id,
             t1.text,
             "n-t1",
             t1X,
-            180,
-            180,
+            levelY.tahap,
+            LAYOUT.nodeWidth,
           );
-          connect(rootEl, t1El, "#64748b");
-          t2Nodes.forEach((t2El) => connect(t1El, t2El, "#64748b"));
-          currentX += 60;
+
+          connect(rootEl, t1El, "#64748b", "", 0, 1, {
+            type: "t1",
+            tahap: t1Text,
+          });
+          t2Nodes.forEach((t2El, i) => {
+            const t2Text = t1.t2[i].text || "Kegiatan Kosong";
+            connect(t1El, t2El, "#64748b", "", i, t2Nodes.length, {
+              type: "t2",
+              tahap: t1Text,
+              kegiatan: t2Text,
+            });
+          });
+          currentX += LAYOUT.horizontalGap;
         });
 
         if (!nodePositions["root"] || nodePositions["root"].x === 0) {
-          let cx = Math.max(currentX / 2 - 110, wrap.offsetWidth / 2 - 110);
+          let cx = Math.max(
+            currentX / 2 - LAYOUT.nodeWidth / 2,
+            wrap.offsetWidth / 2 - LAYOUT.nodeWidth / 2,
+          );
           rootEl.style.left = cx + "px";
           nodePositions["root"] = { ...nodePositions["root"], x: cx };
         }
-        setTimeout(rebuildAllPaths, 80);
+        setTimeout(() => {
+          rebuildAllPaths();
+          applyCanvasFilters();
+        }, 80);
       }
 
       wrap.addEventListener("scroll", () => setTimeout(rebuildAllPaths, 0));
@@ -4439,9 +5008,9 @@
         renderInputs();
         renderCustomLegendsUI();
         renderCanvasLegends();
+        renderSubTabs();
         setTimeout(() => {
           renderCanvas();
-          setTimeout(rebuildAllPaths, 100);
         }, 100);
       });
     </script>
