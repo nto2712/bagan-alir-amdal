@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Aplikasi Bagan Alir Dampak (Amdal)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <link rel="stylesheet" href="css/global.css" />
+    <link rel="stylesheet" href="css/app.css" />
+  </head>
+
+  <body>
+    <div class="sidebar">
+      <div class="scroll-area">
+        <h3 class="sidebar-title">BAGAN ALIR DAMPAK</h3>
+
+        <div class="settings-section">
+          <div class="accordion-header" onclick="toggleAccordion(this)">
+            📄 Informasi Rencana Kegiatan
+          </div>
+          <div class="accordion-content">
+            <label class="settings-label" style="margin-top: 0"
+              >Nama Kegiatan</label
+            >
+            <input
+              id="project_title"
+              value="Pengembangan Lapangan Minyak dan Gas"
+            />
+            <label class="settings-label">File Penyimpanan</label>
+            <div class="btn-file-group">
+              <button class="btn-save" onclick="saveProject()">
+                &#128190; Simpan
+              </button>
+              <button
+                class="btn-load"
+                onclick="document.getElementById('fu').click()"
+              >
+                &#128194; Buka
+              </button>
+            </div>
+            <button class="btn-reset" onclick="resetProject()">
+              Reset Baru
+            </button>
+            <input
+              type="file"
+              id="fu"
+              accept=".json"
+              style="display: none"
+              onchange="loadProject(this)"
+            />
+          </div>
+        </div>
+
+        <div class="settings-section" style="margin-bottom: 0">
+          <div
+            class="accordion-header collapsed"
+            onclick="toggleAccordion(this)"
+          >
+            📝 Input Data Dampak
+          </div>
+          <div class="accordion-content collapsed">
+            <div class="excel-import-box">
+              <label
+                class="settings-label"
+                style="color: #0369a1; margin-top: 0; font-size: 1em"
+                >Import via Excel</label
+              >
+              <p>
+                Format 12 Kolom: <b>Tahap</b>, <b>Kegiatan</b>, <b>Primer</b>,
+                <b>Label_P</b>, <b>Sekunder</b>, <b>Label_S</b>, <b>Tersier</b>,
+                <b>Label_T</b>, <b>Kuartier</b>, <b>Label_Q</b>,
+                <b>Kuintier</b>, <b>Label_Qi</b>
+              </p>
+              <p>Kolom Tahap dan Kegiatan tidak boleh kosong.</p>
+              <p>Kolom label: DPH/DTPH/DTPHKP/-P/-TP/+P/+TP.</p>
+              <a
+                href="assets/img/contoh_excel.png"
+                download="contoh_excel.png"
+                style="
+                  display: inline-block;
+                  font-size: 0.85em;
+                  color: #0284c7;
+                  text-decoration: none;
+                  margin-bottom: 15px;
+                  font-weight: 600;
+                  background: #e0f2fe;
+                  padding: 6px 10px;
+                  border-radius: 4px;
+                  border: 1px solid #bae6fd;
+                  transition: all 0.2s;
+                "
+              >
+                ⬇️ Download Contoh Susunan Excel
+              </a>
+              <button
+                class="btn-load"
+                style="
+                  background: #0284c7;
+                  width: 100%;
+                  font-size: 0.9em;
+                  padding: 10px;
+                "
+                onclick="document.getElementById('excel-upload').click()"
+              >
+                📄 Pilih File Excel (.xlsx)
+              </button>
+              <input
+                type="file"
+                id="excel-upload"
+                accept=".xlsx,.xls,.csv"
+                style="display: none"
+                onchange="importExcel(this)"
+              />
+            </div>
+            <label
+              class="settings-label"
+              style="
+                border-bottom: 2px solid #e2e8f0;
+                padding-bottom: 8px;
+                margin-bottom: 15px;
+              "
+              >Atau Input Manual:</label
+            >
+            <div id="input-container"></div>
+            <button
+              class="btn-add"
+              onclick="addT1()"
+              style="background: var(--tahap); color: white; font-weight: bold"
+            >
+              + Tambah Tahap Kegiatan
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="btn-gen" onclick="renderCanvas()">GENERATE</button>
+        <div class="hint-text">
+          <b>Edit Bagan Alir:</b><br />
+          <b>Klik Kotak</b>: Pilih &nbsp;|&nbsp; <b>Ctrl+Klik</b>:
+          Multi-seleksi<br />
+          <b>Drag Kotak</b>: Geser &nbsp;|&nbsp; <b>Shift+Drag Kotak</b>: Geser
+          lurus<br />
+          <b>Keyboard Panah</b>: Geser kotak terpilih<br />
+          <b>Drag di kanvas kosong</b>: Lasso seleksi<br />
+          <b>Klik Panah</b>: Edit jalur & label<br />
+          <b>Shift+Drag Panah</b>: Geser Tanpa Snapping<br /><br />
+          <b>Copyright:</b> nto
+        </div>
+      </div>
+    </div>
+
+    <div id="main-right">
+      <div class="tab-bar">
+        <button
+          id="btn-toggle-sidebar"
+          onclick="toggleSidebar()"
+          title="Sembunyikan/Tampilkan Sidebar"
+        >
+          ☰
+        </button>
+
+        <button
+          class="tab-btn active"
+          id="tab-btn-canvas"
+          onclick="switchTab('canvas')"
+        >
+          🔀 Bagan Alir Dampak
+        </button>
+        <button
+          class="tab-btn"
+          id="tab-btn-summary"
+          onclick="switchTab('summary')"
+        >
+          📊 Rekapitulasi Dampak
+        </button>
+      </div>
+
+      <div class="tab-panel active" id="tab-canvas">
+        <div class="sub-tab-bar" id="sub-tab-bar-container"></div>
+
+        <button class="btn-export-float" onclick="exportPNG()">
+          📥 Export PNG
+        </button>
+
+        <button
+          class="btn-settings-float"
+          onclick="toggleCanvasSettingsWidget()"
+        >
+          ⚙️ Pengaturan Kanvas
+        </button>
+
+        <button class="btn-filter-float" onclick="toggleCanvasFilterWidget()">
+          🎛️ Filter
+        </button>
+
+        <div
+          id="canvas-filter-widget"
+          style="
+            position: absolute;
+            bottom: 75px;
+            right: 20px;
+            z-index: 200;
+            background: white;
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            padding: 20px;
+            display: none;
+            width: 340px;
+            max-height: 70vh;
+            overflow-y: auto;
+          "
+        ></div>
+
+        <div
+          id="canvas-settings-widget"
+          style="
+            position: absolute;
+            bottom: 75px;
+            right: 170px;
+            z-index: 200;
+            background: white;
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            padding: 20px;
+            display: none;
+            width: 340px;
+            max-height: 70vh;
+            overflow-y: auto;
+          "
+        >
+          <div
+            style="
+              font-size: 0.95em;
+              font-weight: 800;
+              color: #1e293b;
+              margin-bottom: 12px;
+              border-bottom: 2px solid #e2e8f0;
+              padding-bottom: 8px;
+            "
+          >
+            ⚙️ Pengaturan Kanvas
+          </div>
+          <label class="settings-label" style="margin-top: 0"
+            >Warna & Pattern Background</label
+          >
+          <div style="display: flex; gap: 8px">
+            <input
+              type="color"
+              id="conf-bg"
+              value="#ffffff"
+              style="height: 38px; cursor: pointer; flex: 1; padding: 2px"
+            />
+            <select id="conf-pat" style="flex: 2; margin-bottom: 0">
+              <option value="plain">Polos</option>
+              <option value="box">Kotak (Grid)</option>
+              <option value="dot">Titik (Dot)</option>
+            </select>
+          </div>
+          <label class="settings-label" style="margin-top: 15px"
+            >Pilih Huruf</label
+          >
+          <select id="conf-font">
+            <option value="Arial, sans-serif" selected>Arial</option>
+            <option value="'Arial Narrow', sans-serif">Arial Narrow</option>
+            <option value="Calibri, sans-serif">Calibri</option>
+            <option value="'Bookman Old School', serif">
+              Bookman Old School
+            </option>
+            <option value="'Segoe UI', sans-serif">Segoe UI</option>
+          </select>
+
+          <label
+            class="settings-label"
+            style="
+              margin-top: 15px;
+              border-top: 1px solid #e2e8f0;
+              padding-top: 15px;
+            "
+            >Kustomisasi Warna Kotak</label
+          >
+          <select id="sel-node-type" onchange="loadNodeColorPickers()">
+            <option value="root">Judul Proyek</option>
+            <option value="t1">Tahap</option>
+            <option value="t2">Kegiatan</option>
+            <option value="p">Dampak Primer</option>
+            <option value="s">Dampak Sekunder</option>
+            <option value="t">Dampak Tersier</option>
+            <option value="q">Dampak Kuartier</option>
+            <option value="qi">Dampak Kuintier</option>
+          </select>
+          <div
+            style="
+              display: flex;
+              gap: 8px;
+              margin-top: 5px;
+              background: #f8fafc;
+              padding: 10px;
+              border-radius: 6px;
+              border: 1px solid #e2e8f0;
+            "
+          >
+            <div style="flex: 1">
+              <label
+                style="
+                  font-size: 0.7em;
+                  color: #64748b;
+                  font-weight: bold;
+                  display: block;
+                  margin-bottom: 4px;
+                "
+                >Background</label
+              ><input
+                type="color"
+                id="col-bg"
+                oninput="updateNodeColors()"
+                style="
+                  height: 32px;
+                  padding: 2px;
+                  width: 100%;
+                  margin-bottom: 0;
+                "
+              />
+            </div>
+            <div style="flex: 1">
+              <label
+                style="
+                  font-size: 0.7em;
+                  color: #64748b;
+                  font-weight: bold;
+                  display: block;
+                  margin-bottom: 4px;
+                "
+                >Border</label
+              ><input
+                type="color"
+                id="col-bd"
+                oninput="updateNodeColors()"
+                style="
+                  height: 32px;
+                  padding: 2px;
+                  width: 100%;
+                  margin-bottom: 0;
+                "
+              />
+            </div>
+            <div style="flex: 1">
+              <label
+                style="
+                  font-size: 0.7em;
+                  color: #64748b;
+                  font-weight: bold;
+                  display: block;
+                  margin-bottom: 4px;
+                "
+                >Teks</label
+              ><input
+                type="color"
+                id="col-c"
+                oninput="updateNodeColors()"
+                style="
+                  height: 32px;
+                  padding: 2px;
+                  width: 100%;
+                  margin-bottom: 0;
+                "
+              />
+            </div>
+          </div>
+
+          <label
+            class="settings-label"
+            style="
+              margin-top: 15px;
+              border-top: 1px solid #e2e8f0;
+              padding-top: 15px;
+            "
+            >Warna Garis Dampak</label
+          >
+          <p
+            style="
+              font-size: 0.75em;
+              color: #64748b;
+              margin: 0 0 8px 0;
+              line-height: 1.5;
+            "
+          >
+            Setiap warna mewakili satu aliran kegiatan. Klik warna untuk
+            mengubah.
+          </p>
+          <div class="trace-color-grid" id="trace-color-grid"></div>
+          <button class="btn-reset-trace" onclick="resetTraceColors()">
+            ↺ Reset Warna Garis ke Default
+          </button>
+
+          <label
+            class="settings-label"
+            style="
+              margin-top: 15px;
+              border-top: 1px solid #e2e8f0;
+              padding-top: 15px;
+            "
+            >Alignment</label
+          >
+          <div style="display: flex; gap: 5px; flex-wrap: wrap">
+            <button class="btn-align" onclick="alignSelected('top')">
+              ⬆️ Top
+            </button>
+            <button class="btn-align" onclick="alignSelected('center-h')">
+              ↔️ Center H
+            </button>
+            <button class="btn-align" onclick="alignSelected('bottom')">
+              ⬇️ Bottom
+            </button>
+            <button class="btn-align" onclick="alignSelected('left')">
+              ⬅️ Left
+            </button>
+            <button class="btn-align" onclick="alignSelected('center-v')">
+              ↕️ Center V
+            </button>
+            <button class="btn-align" onclick="alignSelected('right')">
+              ➡️ Right
+            </button>
+          </div>
+
+          <label
+            class="settings-label"
+            style="
+              margin-top: 15px;
+              border-top: 1px solid #e2e8f0;
+              padding-top: 15px;
+            "
+            >Orientasi Label Panah</label
+          >
+          <select id="conf-label-orient">
+            <option value="horizontal">Horizontal</option>
+            <option value="vertical">Vertikal</option>
+          </select>
+
+          <label
+            class="settings-label"
+            style="
+              margin-top: 15px;
+              border-top: 1px solid #e2e8f0;
+              padding-top: 15px;
+            "
+            >Posisi Label</label
+          >
+          <div style="display: flex; align-items: center; gap: 6px">
+            <button
+              onclick="adjustLabelDist(-1)"
+              style="
+                padding: 2px 6px;
+                font-size: 12px;
+                min-width: 28px;
+                background: #e2e8f0;
+                color: #334155;
+              "
+              title="Kurangi 1px"
+            >
+              ◀
+            </button>
+            <input
+              type="range"
+              id="conf-label-dist"
+              min="0"
+              max="800"
+              step="1"
+              value="28"
+              style="flex: 1; margin-bottom: 0; cursor: pointer"
+            />
+            <button
+              onclick="adjustLabelDist(1)"
+              style="
+                padding: 2px 6px;
+                font-size: 12px;
+                min-width: 28px;
+                background: #e2e8f0;
+                color: #334155;
+              "
+              title="Tambah 1px"
+            >
+              ▶
+            </button>
+            <span
+              id="label-dist-val"
+              style="
+                font-size: 0.85em;
+                font-weight: bold;
+                width: 30px;
+                text-align: right;
+              "
+              >28</span
+            >
+          </div>
+          <button
+            class="btn-reset-trace"
+            onclick="resetLabelPositions()"
+            style="margin-top: 8px"
+          >
+            ↺ Reset
+          </button>
+
+          <label
+            class="settings-label"
+            style="
+              margin-top: 15px;
+              border-top: 1px solid #e2e8f0;
+              padding-top: 15px;
+            "
+            >Legenda Tambahan</label
+          >
+          <div style="display: flex; gap: 8px; margin-bottom: 8px">
+            <input
+              type="text"
+              id="custom-legend-input"
+              placeholder="Misal: DTPH = Dampak..."
+              style="flex: 1; margin-bottom: 0"
+            />
+            <button
+              onclick="addCustomLegend()"
+              style="
+                background: #3b82f6;
+                color: white;
+                padding: 8px 12px;
+                font-size: 0.85em;
+              "
+            >
+              + Tambah
+            </button>
+          </div>
+          <div
+            id="custom-legend-list"
+            style="display: flex; flex-direction: column; gap: 6px"
+          ></div>
+        </div>
+
+        <div class="zoom-controls">
+          <button onclick="changeZoom(-0.05)" title="Zoom Out">➖</button>
+          <span id="zoom-val">100%</span>
+          <button onclick="changeZoom(0.05)" title="Zoom In">➕</button>
+          <button
+            onclick="resetZoom()"
+            title="Reset Zoom"
+            style="font-weight: bold"
+          >
+            ⟲
+          </button>
+        </div>
+
+        <div id="hint">
+          Drag segmen biru untuk mengatur jalur panah &nbsp;·&nbsp; Klik di luar
+          untuk deselect
+        </div>
+
+        <div class="canvas-legend">
+          <span
+            ><span
+              class="leg-box"
+              style="background: var(--bg-t1); border: 2px solid var(--bd-t1)"
+            ></span
+            >Tahap</span
+          >
+          <span
+            ><span
+              class="leg-box"
+              style="background: var(--bg-t2); border: 2px solid var(--bd-t2)"
+            ></span
+            >Kegiatan</span
+          >
+          <span
+            ><span
+              class="leg-box"
+              style="background: var(--bg-p); border: 2px solid var(--bd-p)"
+            ></span
+            >Dampak Primer</span
+          >
+          <span
+            ><span
+              class="leg-box"
+              style="background: var(--bg-s); border: 2px solid var(--bd-s)"
+            ></span
+            >Dampak Sekunder</span
+          >
+          <span
+            ><span
+              class="leg-box"
+              style="background: var(--bg-t); border: 2px solid var(--bd-t)"
+            ></span
+            >Dampak Tersier</span
+          >
+          <span id="leg-q" style="display: none"
+            ><span
+              class="leg-box"
+              style="background: var(--bg-q); border: 2px solid var(--bd-q)"
+            ></span
+            >Dampak Kuartier</span
+          >
+          <span id="leg-qi" style="display: none"
+            ><span
+              class="leg-box"
+              style="background: var(--bg-qi); border: 2px solid var(--bd-qi)"
+            ></span
+            >Dampak Kuintier</span
+          >
+          <span><span></span>Warna Panah = Aliran Dampak</span>
+          <span id="custom-legends-container" style="display: contents"></span>
+        </div>
+
+        <div id="canvas-wrap" tabindex="0">
+          <div id="canvas-inner">
+            <div id="lasso-box"></div>
+            <svg id="svg-layer" xmlns="http://www.w3.org/2000/svg">
+              <defs></defs>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="tab-summary">
+        <div id="summary-panel">
+          <div class="summary-header">
+            <h2>📊 Rekapitulasi Dampak</h2>
+            <div style="display: flex; align-items: center">
+              <button class="btn-refresh-summary" onclick="renderSummary()">
+                🔄 Perbarui
+              </button>
+            </div>
+          </div>
+
+          <div id="summary-content">
+            <div class="empty-state">
+              <div class="empty-icon">📋</div>
+              <div>
+                Klik <b>Perbarui</b> atau <b>Generate Bagan</b> untuk
+                menampilkan ringkasan.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="js/app.js"></script>
+  </body>
+</html>
