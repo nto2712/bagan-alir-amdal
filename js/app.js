@@ -36,6 +36,8 @@ let flowcharts = [
     zoom: 1,
     scrollX: 0,
     scrollY: 0,
+    undoStack: [],
+    redoStack: [],
   },
 ];
 let currentFlowchartIndex = 0;
@@ -48,6 +50,183 @@ let selectedOrder = [];
 
 let currentMainTab = "canvas";
 let summaryFilters = { tahap: null, kegiatan: null, labels: null };
+
+// ── SISTEM UNDO & REDO KANVAS ──
+function getActiveHistory() {
+  if (!flowcharts[currentFlowchartIndex].undoStack) {
+    flowcharts[currentFlowchartIndex].undoStack = [];
+  }
+  if (!flowcharts[currentFlowchartIndex].redoStack) {
+    flowcharts[currentFlowchartIndex].redoStack = [];
+  }
+  return {
+    undo: flowcharts[currentFlowchartIndex].undoStack,
+    redo: flowcharts[currentFlowchartIndex].redoStack,
+  };
+}
+
+function pushHistory() {
+  const hist = getActiveHistory();
+  const snapshot = {
+    positions: JSON.parse(JSON.stringify(nodePositions)),
+    conns: JSON.parse(JSON.stringify(connData)),
+    settings: {
+      bgColor: document.getElementById("conf-bg").value,
+      bgPattern: document.getElementById("conf-pat").value,
+      fontFamily: document.getElementById("conf-font").value,
+      nodeFontSize: parseInt(
+        document.getElementById("conf-node-font-size").value,
+        10,
+      ),
+      labelFontSize: parseInt(
+        document.getElementById("conf-label-font-size").value,
+        10,
+      ),
+      labelOrient: document.getElementById("conf-label-orient").value,
+      labelDist: document.getElementById("conf-label-dist").value,
+      nodeColors: JSON.parse(JSON.stringify(nodeColors)),
+      traceColors: [...traceColors],
+    },
+  };
+  hist.undo.push(snapshot);
+  if (hist.undo.length > 30) hist.undo.shift(); // Batas maksimal 30 riwayat
+  hist.redo.length = 0; // Kosongkan redo setelah ada aksi baru
+  updateUndoRedoButtons();
+}
+
+function restoreSnapshot(snapshot) {
+  nodePositions = JSON.parse(JSON.stringify(snapshot.positions));
+  connData = JSON.parse(JSON.stringify(snapshot.conns));
+  flowcharts[currentFlowchartIndex].positions = nodePositions;
+  flowcharts[currentFlowchartIndex].conns = connData;
+
+  const curSet = snapshot.settings;
+  if (curSet) {
+    document.getElementById("conf-bg").value = curSet.bgColor || "#ffffff";
+    document.getElementById("conf-pat").value = curSet.bgPattern || "plain";
+    document.getElementById("conf-font").value =
+      curSet.fontFamily || "Arial, sans-serif";
+
+    const nSizeEl = document.getElementById("conf-node-font-size");
+    const nSizeVal = document.getElementById("node-font-size-val");
+    const lSizeEl = document.getElementById("conf-label-font-size");
+    const lSizeVal = document.getElementById("label-font-size-val");
+
+    const nfSize = curSet.nodeFontSize !== undefined ? curSet.nodeFontSize : 12;
+    const lfSize =
+      curSet.labelFontSize !== undefined ? curSet.labelFontSize : 12;
+
+    if (nSizeEl) nSizeEl.value = nfSize;
+    if (nSizeVal) nSizeVal.innerText = nfSize + "px";
+    wrap.style.fontSize = nfSize + "px";
+
+    if (lSizeEl) lSizeEl.value = lfSize;
+    if (lSizeVal) lSizeVal.innerText = lfSize + "px";
+    document.querySelectorAll(".conn-label").forEach((el) => {
+      el.style.fontSize = lfSize + "px";
+    });
+
+    document.getElementById("conf-label-orient").value =
+      curSet.labelOrient || "horizontal";
+    const distEl = document.getElementById("conf-label-dist");
+    const distVal = document.getElementById("label-dist-val");
+    if (distEl)
+      distEl.value = curSet.labelDist !== undefined ? curSet.labelDist : 28;
+    if (distVal)
+      distVal.innerText =
+        curSet.labelDist !== undefined ? curSet.labelDist : 28;
+
+    nodeColors = curSet.nodeColors
+      ? JSON.parse(JSON.stringify(curSet.nodeColors))
+      : JSON.parse(JSON.stringify(defaultNodeColors));
+    traceColors = curSet.traceColors ? [...curSet.traceColors] : [];
+
+    inner.style.backgroundColor = document.getElementById("conf-bg").value;
+    wrap.style.fontFamily = document.getElementById("conf-font").value;
+    setPattern(document.getElementById("conf-pat").value);
+    applyNodeColors();
+    loadNodeColorPickers();
+  }
+
+  flowcharts[currentFlowchartIndex].settings = curSet;
+  renderCanvas();
+  applyZoom();
+  updateUndoRedoButtons();
+}
+
+function undoCanvas() {
+  const hist = getActiveHistory();
+  if (hist.undo.length === 0) return;
+
+  const currentSnapshot = {
+    positions: JSON.parse(JSON.stringify(nodePositions)),
+    conns: JSON.parse(JSON.stringify(connData)),
+    settings: {
+      bgColor: document.getElementById("conf-bg").value,
+      bgPattern: document.getElementById("conf-pat").value,
+      fontFamily: document.getElementById("conf-font").value,
+      nodeFontSize: parseInt(
+        document.getElementById("conf-node-font-size").value,
+        10,
+      ),
+      labelFontSize: parseInt(
+        document.getElementById("conf-label-font-size").value,
+        10,
+      ),
+      labelOrient: document.getElementById("conf-label-orient").value,
+      labelDist: document.getElementById("conf-label-dist").value,
+      nodeColors: JSON.parse(JSON.stringify(nodeColors)),
+      traceColors: [...traceColors],
+    },
+  };
+  hist.redo.push(currentSnapshot);
+
+  const snapshot = hist.undo.pop();
+  restoreSnapshot(snapshot);
+}
+
+function redoCanvas() {
+  const hist = getActiveHistory();
+  if (hist.redo.length === 0) return;
+
+  const currentSnapshot = {
+    positions: JSON.parse(JSON.stringify(nodePositions)),
+    conns: JSON.parse(JSON.stringify(connData)),
+    settings: {
+      bgColor: document.getElementById("conf-bg").value,
+      bgPattern: document.getElementById("conf-pat").value,
+      fontFamily: document.getElementById("conf-font").value,
+      nodeFontSize: parseInt(
+        document.getElementById("conf-node-font-size").value,
+        10,
+      ),
+      labelFontSize: parseInt(
+        document.getElementById("conf-label-font-size").value,
+        10,
+      ),
+      labelOrient: document.getElementById("conf-label-orient").value,
+      labelDist: document.getElementById("conf-label-dist").value,
+      nodeColors: JSON.parse(JSON.stringify(nodeColors)),
+      traceColors: [...traceColors],
+    },
+  };
+  hist.undo.push(currentSnapshot);
+
+  const snapshot = hist.redo.pop();
+  restoreSnapshot(snapshot);
+}
+
+function updateUndoRedoButtons() {
+  const hist = getActiveHistory();
+  const btnUndo = document.querySelector(
+    ".undo-redo-controls button:nth-child(1)",
+  );
+  const btnRedo = document.querySelector(
+    ".undo-redo-controls button:nth-child(2)",
+  );
+  if (btnUndo) btnUndo.disabled = hist.undo.length === 0;
+  if (btnRedo) btnRedo.disabled = hist.redo.length === 0;
+}
 
 function getCanvasFilters() {
   if (!flowcharts[currentFlowchartIndex].filters) {
@@ -163,6 +342,7 @@ function renderSubTabs() {
         <button class="sub-tab-btn ${isActive ? "active" : ""}" onclick="switchSubTab(${idx})" style="margin-right: 0; border-top-right-radius: 0; border-bottom-right-radius: 0;">
           ${escapeHtml(fc.name)}
         </button>
+        <button onclick="renameSubTab(${idx}, event)" style="background: #3b82f6; color: white; border: none; padding: 0 8px; cursor: pointer; height: 100%; font-size: 11px; display: flex; align-items: center; justify-content: center; ${flowcharts.length > 1 && isActive ? "" : "border-top-right-radius: 6px; border-bottom-right-radius: 6px;"}" title="Ubah Nama Bagan">✏️</button>
         ${
           flowcharts.length > 1 && isActive
             ? `
@@ -175,6 +355,16 @@ function renderSubTabs() {
   });
   html += `<button class="btn-add-sub-tab" onclick="addSubTab()" title="Tambah Versi Bagan">+</button>`;
   container.innerHTML = html;
+}
+
+function renameSubTab(idx, event) {
+  if (event) event.stopPropagation();
+  const currentName = flowcharts[idx].name;
+  const newName = prompt("Masukkan nama baru untuk bagan alir:", currentName);
+  if (newName !== null && newName.trim() !== "") {
+    flowcharts[idx].name = newName.trim();
+    renderSubTabs();
+  }
 }
 
 function switchSubTab(idx) {
@@ -216,13 +406,11 @@ function switchSubTab(idx) {
     document.getElementById("conf-font").value =
       curSet.fontFamily || "Arial, sans-serif";
 
-    // Pemulihan element kontrol Ukuran Huruf saat sub tab berganti
     const nSizeEl = document.getElementById("conf-node-font-size");
     const nSizeVal = document.getElementById("node-font-size-val");
     const lSizeEl = document.getElementById("conf-label-font-size");
     const lSizeVal = document.getElementById("label-font-size-val");
 
-    // Backward compabitility if fontSize was used
     const nfSize =
       curSet.nodeFontSize !== undefined
         ? curSet.nodeFontSize
@@ -273,6 +461,7 @@ function switchSubTab(idx) {
   renderCanvasLegends();
   renderCanvas();
   applyZoom();
+  updateUndoRedoButtons();
 
   setTimeout(() => {
     wrap.scrollLeft = flowcharts[currentFlowchartIndex].scrollX || 0;
@@ -322,6 +511,8 @@ function addSubTab() {
     zoom: currentZoom,
     scrollX: wrap.scrollLeft,
     scrollY: wrap.scrollTop,
+    undoStack: [],
+    redoStack: [],
   });
 
   switchSubTab(newIdx);
@@ -335,13 +526,11 @@ function deleteSubTab(idx, event) {
 
   flowcharts.splice(idx, 1);
 
-  // Ambil index tujuan perpindahan tab setelah dihapus
   let targetIdx = currentFlowchartIndex;
   if (idx <= currentFlowchartIndex) {
     targetIdx = Math.max(0, currentFlowchartIndex - 1);
   }
 
-  // Set paksa index ke target terdekat sebelum proses render ulang internal state
   currentFlowchartIndex = targetIdx;
   nodePositions = flowcharts[currentFlowchartIndex].positions;
   connData = flowcharts[currentFlowchartIndex].conns;
@@ -458,6 +647,7 @@ function renderTraceColorGrid() {
 }
 
 function updateTraceColor(idx, newColor) {
+  pushHistory();
   const oldColor = traceColors[idx];
   traceColors[idx] = newColor;
   Object.keys(connectors).forEach((key) => {
@@ -472,6 +662,7 @@ function updateTraceColor(idx, newColor) {
 }
 
 function resetTraceColors() {
+  pushHistory();
   traceColors = [];
   renderCanvas();
 }
@@ -520,15 +711,18 @@ const nodeResizeObserver = window.ResizeObserver
     })
   : { observe: () => {}, unobserve: () => {} };
 
-fontIn.addEventListener(
-  "change",
-  (e) => (wrap.style.fontFamily = e.target.value),
-);
-bgIn.addEventListener(
-  "input",
-  (e) => (inner.style.backgroundColor = e.target.value),
-);
-patIn.addEventListener("change", (e) => setPattern(e.target.value));
+fontIn.addEventListener("change", (e) => {
+  pushHistory();
+  wrap.style.fontFamily = e.target.value;
+});
+bgIn.addEventListener("change", (e) => {
+  pushHistory();
+  inner.style.backgroundColor = e.target.value;
+});
+patIn.addEventListener("change", (e) => {
+  pushHistory();
+  setPattern(e.target.value);
+});
 
 function setPattern(p) {
   inner.classList.remove("bg-box", "bg-dot");
@@ -541,6 +735,7 @@ function getLabelOrient() {
   return labelOrientEl ? labelOrientEl.value : "horizontal";
 }
 labelOrientEl.addEventListener("change", () => {
+  pushHistory();
   Object.keys(connectors).forEach((key) => {
     const conn = connectors[key];
     if (conn.labelEl)
@@ -550,13 +745,16 @@ labelOrientEl.addEventListener("change", () => {
 
 const labelDistEl = document.getElementById("conf-label-dist");
 const labelDistVal = document.getElementById("label-dist-val");
-if (labelDistEl)
+if (labelDistEl) {
   labelDistEl.addEventListener("input", (e) => {
     if (labelDistVal) labelDistVal.innerText = e.target.value;
     Object.keys(connectors).forEach((key) => refreshConn(key));
   });
+  labelDistEl.addEventListener("change", () => pushHistory());
+}
 
 function resetLabelPositions() {
+  pushHistory();
   const distEl = document.getElementById("conf-label-dist"),
     distVal = document.getElementById("label-dist-val");
   if (distEl) {
@@ -570,6 +768,7 @@ function resetLabelPositions() {
 }
 
 function adjustLabelDist(delta) {
+  pushHistory();
   const distEl = document.getElementById("conf-label-dist"),
     distVal = document.getElementById("label-dist-val");
   if (distEl) {
@@ -635,22 +834,28 @@ async function saveProject() {
     nodeFontSize: parseInt(
       document.getElementById("conf-node-font-size").value,
       10,
-    ), // Menyimpan ukuran huruf node ke JSON
+    ), // Menyimpan ukuran huruf node ke JSON (hingga 50px)
     labelFontSize: parseInt(
       document.getElementById("conf-label-font-size").value,
       10,
-    ), // Menyimpan ukuran huruf label ke JSON
+    ), // Menyimpan ukuran huruf label ke JSON (hingga 50px)
     labelOrient: getLabelOrient(),
     labelDist: document.getElementById("conf-label-dist").value,
     nodeColors: JSON.parse(JSON.stringify(nodeColors)),
     traceColors: [...traceColors],
   };
 
+  // Bersihkan data stack riwayat agar file JSON tidak membesar
+  const cleanFlowcharts = flowcharts.map((fc) => {
+    const { undoStack, redoStack, ...rest } = fc;
+    return rest;
+  });
+
   const d = {
     title: document.getElementById("project_title").value,
     settings: { summaryFilters: summaryFilters },
     data: state,
-    flowcharts: flowcharts,
+    flowcharts: cleanFlowcharts,
     currentFlowchartIndex: currentFlowchartIndex,
   };
 
@@ -719,6 +924,8 @@ function loadProject(inp) {
           currentFlowchartIndex = d.currentFlowchartIndex || 0;
 
           flowcharts.forEach((fc) => {
+            fc.undoStack = [];
+            fc.redoStack = [];
             if (!fc.customLegends)
               fc.customLegends = d.settings?.customLegends
                 ? [...d.settings.customLegends]
@@ -816,6 +1023,8 @@ function loadProject(inp) {
               zoom: 1,
               scrollX: 0,
               scrollY: 0,
+              undoStack: [],
+              redoStack: [],
             },
           ];
           currentFlowchartIndex = 0;
@@ -831,7 +1040,6 @@ function loadProject(inp) {
           patIn.value = currentSet.bgPattern;
           fontIn.value = currentSet.fontFamily;
 
-          // Memulihkan ukuran huruf global dari file JSON yang dibaca
           const nSizeEl = document.getElementById("conf-node-font-size");
           const nSizeVal = document.getElementById("node-font-size-val");
           const lSizeEl = document.getElementById("conf-label-font-size");
@@ -881,6 +1089,7 @@ function loadProject(inp) {
         renderSubTabs();
         renderCanvas();
         applyZoom();
+        updateUndoRedoButtons();
 
         setTimeout(() => {
           wrap.scrollLeft = flowcharts[currentFlowchartIndex].scrollX || 0;
@@ -923,6 +1132,8 @@ function resetProject() {
       zoom: 1,
       scrollX: 0,
       scrollY: 0,
+      undoStack: [],
+      redoStack: [],
     },
   ];
   currentFlowchartIndex = 0;
@@ -945,7 +1156,6 @@ function resetProject() {
   patIn.value = "plain";
   fontIn.value = "Arial, sans-serif";
 
-  // Reset komponen visual ukuran huruf ke standar
   document.getElementById("conf-node-font-size").value = 12;
   document.getElementById("node-font-size-val").innerText = "12px";
   wrap.style.fontSize = "12px";
@@ -968,6 +1178,7 @@ function resetProject() {
   renderCanvasLegends();
   renderSubTabs();
   renderCanvas();
+  updateUndoRedoButtons();
 }
 
 window.exportChartJS = function (canvasId, fileName) {
@@ -1020,8 +1231,11 @@ function exportPNG() {
   const oldZoom = currentZoom;
   currentZoom = 1;
   applyZoom();
+
+  // 1. Cari batas area (Bounding Box) dari semua node yang aktif
   let minX = Infinity,
     maxX = 0,
+    minY = Infinity,
     maxY = 0;
   document.querySelectorAll(".node").forEach((n) => {
     if (n.style.pointerEvents === "none") return;
@@ -1031,11 +1245,14 @@ function exportPNG() {
       bottom = y + n.offsetHeight;
     if (x < minX) minX = x;
     if (right > maxX) maxX = right;
+    if (y < minY) minY = y;
     if (bottom > maxY) maxY = bottom;
   });
+
   if (minX === Infinity) {
     minX = 0;
     maxX = 800;
+    minY = 0;
     maxY = 600;
   }
 
@@ -1045,29 +1262,47 @@ function exportPNG() {
 
   wrap.appendChild(legendEl);
 
+  // Siapkan legenda untuk diukur (Matikan transform agar pembacaan akurat)
   legendEl.style.cssText =
     originalLegendCSS +
-    "; position:absolute !important; display:flex !important; flex-wrap:nowrap !important; white-space:nowrap !important; width:max-content !important; visibility:hidden !important;";
+    "; position:absolute !important; display:flex !important; flex-wrap:nowrap !important; white-space:nowrap !important; width:max-content !important; visibility:hidden !important; transform:none !important;";
   const idealLegendWidth = legendEl.offsetWidth;
 
-  const chartWidth = Math.max(800, maxX + 100, idealLegendWidth + 60);
-  const chartCenter = chartWidth / 2;
+  // 2. Tentukan ukuran akhir gambar dengan padding kiri & kanan yang simetris
+  const contentWidth = maxX - minX;
+  const chartWidth = Math.max(800, contentWidth + 160, idealLegendWidth + 80);
+
+  // Hitung pergeseran (offset) agar bagan alir tepat di tengah horizontal dan punya margin atas 50px
+  const offsetX = (chartWidth - contentWidth) / 2 - minX;
+  const offsetY = 50 - minY;
+
+  // 3. Atur posisi legenda (Tengah absolut dengan piksel, TANPA transform)
   let legendStyle =
     chartWidth >= idealLegendWidth
-      ? "; position:absolute !important; display:flex !important; flex-wrap:nowrap !important; white-space:nowrap !important; width:max-content !important; align-items:center !important; justify-content:center !important; padding:10px 20px !important;"
-      : `; position:absolute !important; display:flex !important; flex-wrap:wrap !important; white-space:normal !important; width:${chartWidth - 40}px !important; align-items:center !important; justify-content:center !important; padding:10px 20px !important; text-align:center !important;`;
+      ? "; position:absolute !important; display:flex !important; flex-wrap:nowrap !important; white-space:nowrap !important; width:max-content !important; align-items:center !important; justify-content:center !important; padding:10px 20px !important; transform:none !important;"
+      : `; position:absolute !important; display:flex !important; flex-wrap:wrap !important; white-space:normal !important; width:${chartWidth - 60}px !important; align-items:center !important; justify-content:center !important; padding:10px 20px !important; text-align:center !important; transform:none !important;`;
 
   legendEl.style.cssText = originalLegendCSS + legendStyle;
+  const legendWidth = legendEl.offsetWidth;
   const legendHeight = legendEl.offsetHeight;
-  const finalHeight = maxY + 50 + legendHeight + 50;
-  legendEl.style.top = maxY + 50 + "px";
-  legendEl.style.left = chartCenter + "px";
-  legendEl.style.transform = "translateX(-50%)";
 
-  const originalStyle = wrap.getAttribute("style") || "";
+  // Posisi left legenda tepat di tengah (chartWidth - legendWidth) / 2
+  legendEl.style.left = Math.max(0, (chartWidth - legendWidth) / 2) + "px";
+  legendEl.style.top = maxY + offsetY + 50 + "px";
+
+  const finalHeight = maxY + offsetY + 50 + legendHeight + 60;
+
+  // 4. Geser sementara kontainer inner agar semua elemen berada di tengah kanvas
+  const originalWrapStyle = wrap.getAttribute("style") || "";
+  const originalInnerLeft = inner.style.left;
+  const originalInnerTop = inner.style.top;
   const osl = wrap.scrollLeft,
     ost = wrap.scrollTop;
+
   wrap.style.cssText = `position:absolute;top:0;left:0;width:${chartWidth}px;height:${finalHeight}px;overflow:visible;z-index:9999`;
+  inner.style.left = offsetX + "px";
+  inner.style.top = offsetY + "px";
+
   const safeTitle =
     document
       .getElementById("project_title")
@@ -1095,6 +1330,7 @@ function exportPNG() {
       if (!el || !el.classList) return el && el.id === "hint";
       return (
         el.classList.contains("zoom-controls") ||
+        el.classList.contains("undo-redo-controls") ||
         el.classList.contains("btn-export-float") ||
         el.classList.contains("btn-filter-float") ||
         el.classList.contains("btn-settings-float") ||
@@ -1107,7 +1343,10 @@ function exportPNG() {
     },
   })
     .then((canvas) => {
-      wrap.setAttribute("style", originalStyle);
+      // 5. Kembalikan semua style & posisi ke kondisi semula (layar tidak akan berkedip/rusak)
+      wrap.setAttribute("style", originalWrapStyle);
+      inner.style.left = originalInnerLeft;
+      inner.style.top = originalInnerTop;
       wrap.scrollLeft = osl;
       wrap.scrollTop = ost;
       legendEl.style.cssText = originalLegendCSS;
@@ -1124,7 +1363,9 @@ function exportPNG() {
     .catch((err) => {
       console.error(err);
       alert("Gagal export PNG.");
-      wrap.setAttribute("style", originalStyle);
+      wrap.setAttribute("style", originalWrapStyle);
+      inner.style.left = originalInnerLeft;
+      inner.style.top = originalInnerTop;
       legendEl.style.cssText = originalLegendCSS;
       legendParent.appendChild(legendEl);
       btnPng.innerText = oldText;
@@ -1220,6 +1461,8 @@ function importExcel(inp) {
           zoom: 1,
           scrollX: 0,
           scrollY: 0,
+          undoStack: [],
+          redoStack: [],
         },
       ];
       currentFlowchartIndex = 0;
@@ -1232,6 +1475,7 @@ function importExcel(inp) {
       renderInputs();
       renderSubTabs();
       renderCanvas();
+      updateUndoRedoButtons();
       alert("Data berhasil diimport!");
     } catch (err) {
       console.error(err);
@@ -2220,7 +2464,6 @@ function buildConnector(
     labelEl.setAttribute("x", lpos.x + off.dx);
     labelEl.setAttribute("y", lpos.y + off.dy);
 
-    // Setel font size agar sesuai slider saat pembuatan element
     const currentLabelSize = document.getElementById("conf-label-font-size")
       ? document.getElementById("conf-label-font-size").value
       : 12;
@@ -2310,12 +2553,14 @@ function buildConnector(
       e.stopPropagation();
       if (selectedConn && selectedConn !== key) return;
       selectConn(key);
+      pushHistory();
       attachLabelDrag(e, key);
     });
     if (labelHandleEl)
       labelHandleEl.addEventListener("mousedown", (e) => {
         e.stopPropagation();
         if (selectedConn && selectedConn !== key) return;
+        pushHistory();
         attachLabelDrag(e, key);
       });
   }
@@ -2484,6 +2729,7 @@ window.addEventListener("mouseup", () => {
 function attachSegDrag(hEl, key, sIdx, isH, isV) {
   hEl.addEventListener("mousedown", (e) => {
     e.stopPropagation();
+    pushHistory();
     const startX = e.clientX,
       startY = e.clientY,
       c = connectors[key],
@@ -2639,6 +2885,7 @@ function refreshAllConns() {
 function alignSelected(type) {
   if (selectedOrder.length < 2)
     return alert("Pilih minimal 2 kotak (tahan Ctrl saat klik).");
+  pushHistory();
   const refPos = {
     x: parseFloat(selectedOrder[0].style.left) || 0,
     y: parseFloat(selectedOrder[0].style.top) || 0,
@@ -2717,6 +2964,9 @@ function makeDraggable(el) {
       selectedConn = null;
       hint.classList.remove("show");
     }
+    if (!isNodeDragging) {
+      pushHistory();
+    }
     isNodeDragging = true;
     dragStartX = e.clientX;
     dragStartY = e.clientY;
@@ -2758,6 +3008,23 @@ window.addEventListener("mouseup", () => {
 
 window.addEventListener("keydown", (e) => {
   if (["INPUT", "SELECT", "TEXTAREA"].includes(e.target.tagName)) return;
+
+  // Shortcut Keyboard untuk Undo (Ctrl+Z) dan Redo (Ctrl+Y atau Ctrl+Shift+Z)
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+    if (e.shiftKey) {
+      redoCanvas();
+    } else {
+      undoCanvas();
+    }
+    e.preventDefault();
+    return;
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") {
+    redoCanvas();
+    e.preventDefault();
+    return;
+  }
+
   const sel = document.querySelectorAll(".node.sel");
   if (sel.length === 0) return;
   let dx = 0,
@@ -2769,6 +3036,7 @@ window.addEventListener("keydown", (e) => {
   else if (e.key === "ArrowRight") dx = step;
   else return;
   e.preventDefault();
+  pushHistory();
   sel.forEach((el) => {
     el.style.left = (parseFloat(el.style.left) || 0) + dx + "px";
     el.style.top = (parseFloat(el.style.top) || 0) + dy + "px";
@@ -3134,9 +3402,9 @@ if (nodeFontSizeIn) {
     if (nodeFontSizeVal) nodeFontSizeVal.innerText = size + "px";
     wrap.style.fontSize = size + "px";
 
-    // Memberikan delay kecil untuk kalkulasi ulang bounding box node yang terdampak wrapping teks
     setTimeout(refreshAllConns, 50);
   });
+  nodeFontSizeIn.addEventListener("change", () => pushHistory());
 }
 
 const labelFontSizeIn = document.getElementById("conf-label-font-size");
@@ -3147,14 +3415,13 @@ if (labelFontSizeIn) {
     const size = e.target.value;
     if (labelFontSizeVal) labelFontSizeVal.innerText = size + "px";
 
-    // Sinkronisasi ukuran teks elemen label SVG panah menggunakan styling inline
     document.querySelectorAll(".conn-label").forEach((el) => {
       el.style.fontSize = size + "px";
     });
 
-    // Refresh konektor untuk merapikan handle apabila teks membesar/mengecil
     setTimeout(refreshAllConns, 50);
   });
+  labelFontSizeIn.addEventListener("change", () => pushHistory());
 }
 
 window.addEventListener("load", () => {
@@ -3211,5 +3478,6 @@ window.addEventListener("load", () => {
   renderSubTabs();
   setTimeout(() => {
     renderCanvas();
+    updateUndoRedoButtons();
   }, 100);
 });

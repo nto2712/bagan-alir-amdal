@@ -56,9 +56,9 @@ function updateDots(index) {
   dots[index].classList.add("active");
 }
 
-// Timer pergantian slide (4 detik = 4000ms)
+// Timer pergantian slide (4 detik = 3000ms)
 function startInterval() {
-  slideInterval = setInterval(nextSlide, 4000);
+  slideInterval = setInterval(nextSlide, 3000);
 }
 
 function resetInterval() {

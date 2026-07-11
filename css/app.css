@@ -582,6 +582,45 @@ button:active {
   gap: 6px;
   z-index: 200;
 }
+
+/* Posisi Tombol Undo dan Redo Melayang */
+.undo-redo-controls {
+  position: absolute;
+  top: 55px;
+  left: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 6px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 200;
+}
+.undo-redo-controls button {
+  background: #f8fafc;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.85em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.undo-redo-controls button:hover:not(:disabled) {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+}
+.undo-redo-controls button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .btn-export-float {
   position: absolute;
   bottom: 20px;
@@ -1072,6 +1111,7 @@ button:active {
   .controls,
   #btn-toggle-sidebar,
   .zoom-controls,
+  .undo-redo-controls,
   .tab-bar,
   .sub-tab-bar,
   .btn-export-chart,

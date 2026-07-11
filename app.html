@@ -146,7 +146,8 @@
           <b>Keyboard Panah</b>: Geser kotak terpilih<br />
           <b>Drag di kanvas kosong</b>: Lasso seleksi<br />
           <b>Klik Panah</b>: Edit jalur & label<br />
-          <b>Shift+Drag Panah</b>: Geser Tanpa Snapping<br /><br />
+          <b>Shift+Drag Panah</b>: Geser Tanpa Snapping<br />
+          <b>Ctrl+Z / Ctrl+Y</b>: Undo & Redo<br /><br />
           <b>Copyright:</b> nto
         </div>
       </div>
@@ -180,6 +181,16 @@
 
       <div class="tab-panel active" id="tab-canvas">
         <div class="sub-tab-bar" id="sub-tab-bar-container"></div>
+
+        <!-- Tombol Undo dan Redo Melayang di Kiri Atas -->
+        <div class="undo-redo-controls">
+          <button onclick="undoCanvas()" title="Undo (Ctrl+Z)" disabled>
+            ↩️ Undo
+          </button>
+          <button onclick="redoCanvas()" title="Redo (Ctrl+Y)" disabled>
+            ↪️ Redo
+          </button>
+        </div>
 
         <button class="btn-export-float" onclick="exportPNG()">
           📥 Export PNG
@@ -274,7 +285,7 @@
             <option value="'Segoe UI', sans-serif">Segoe UI</option>
           </select>
 
-          <!-- Slider Ukuran Huruf Node -->
+          <!-- Slider Ukuran Huruf Node (Maksimal diperbarui ke 50px) -->
           <label class="settings-label" style="margin-top: 15px"
             >Ukuran Huruf Kotak (Node)</label
           >
@@ -283,7 +294,7 @@
               type="range"
               id="conf-node-font-size"
               min="10"
-              max="24"
+              max="50"
               step="1"
               value="12"
               style="flex: 1; margin-bottom: 0; cursor: pointer"
@@ -293,14 +304,14 @@
               style="
                 font-size: 0.85em;
                 font-weight: bold;
-                width: 30px;
+                width: 35px;
                 text-align: right;
               "
               >12px</span
             >
           </div>
 
-          <!-- Slider Ukuran Huruf Label Panah -->
+          <!-- Slider Ukuran Huruf Label Panah (Maksimal diperbarui ke 50px) -->
           <label class="settings-label" style="margin-top: 10px"
             >Ukuran Huruf Label Panah</label
           >
@@ -309,7 +320,7 @@
               type="range"
               id="conf-label-font-size"
               min="10"
-              max="24"
+              max="50"
               step="1"
               value="12"
               style="flex: 1; margin-bottom: 0; cursor: pointer"
@@ -319,7 +330,7 @@
               style="
                 font-size: 0.85em;
                 font-weight: bold;
-                width: 30px;
+                width: 35px;
                 text-align: right;
               "
               >12px</span
