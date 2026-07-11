@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bagan Alir Dampak Lingkungan (AMDAL)</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/global.css" />
+    <link rel="stylesheet" href="css/index.css" />
+  </head>
+  <body>
+    <header>
+      <a href="#" class="logo"> BAGAN ALIR<span>AMDAL</span> </a>
+      <nav>
+        <a href="#beranda">Beranda</a>
+        <a href="#fitur">Fitur Unggulan</a>
+        <a href="#kontak">Kontak</a>
+      </nav>
+    </header>
+
+    <section class="hero" id="beranda">
+      <div class="hero-text">
+        <h1>Visualisasikan <span>Dampak Lingkungan</span> dengan Mudah.</h1>
+        <p>
+          Aplikasi interaktif untuk membuat, mengedit, dan mengekspor bagan alir
+          dampak dalam dokumen AMDAL. Percepat proses penyusunan dokumen Anda
+          sekarang.
+        </p>
+        <a href="app.html" class="btn-primary">
+          Mulai Buat Bagan Alir
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </a>
+      </div>
+      <div class="hero-image">
+        <div class="carousel-container">
+          <img
+            id="heroImg"
+            src="assets/img/hero-img.png"
+            alt="Ilustrasi Aplikasi AMDAL"
+          />
+          <div class="carousel-dots" id="carouselDots"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="features" id="fitur">
+      <h2>Fitur Unggulan</h2>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🖱️</div>
+          <h3>Drag & Drop Mudah</h3>
+          <p>
+            Atur tata letak setiap kotak dampak secara bebas. Geser, susun, dan
+            sejajarkan node dengan sangat presisi di dalam kanvas.
+          </p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📄</div>
+          <h3>Import Data Excel</h3>
+          <p>
+            Tidak perlu input manual satu per satu. Import data masif Anda
+            melalui template Excel (.xlsx) langsung menjadi bagan otomatis.
+          </p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📸</div>
+          <h3>Export HD</h3>
+          <p>
+            Unduh hasil akhir bagan alir dalam resolusi tinggi yang bersih dan
+            rapi, siap disisipkan langsung ke dalam laporan dokumen AMDAL.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="contact" id="kontak">
+      <h2>Kontak</h2>
+      <p>
+        Punya saran fitur, menemukan bug, atau ingin berkontribusi pada
+        pengembangan aplikasi ini? Silakan kunjungi repositori GitHub di bawah
+        ini.
+      </p>
+      <div class="contact-links">
+        <a
+          href="https://github.com/nto2712"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="btn-outline"
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"
+            ></path>
+          </svg>
+          GitHub
+        </a>
+      </div>
+    </section>
+
+    <div id="imageLightbox" class="lightbox">
+      <span class="lightbox-close">&times;</span>
+      <img
+        class="lightbox-content"
+        id="lightboxImg"
+        src=""
+        alt="Popup Ilustrasi"
+      />
+    </div>
+
+    <footer>
+      <p>
+        &copy; 2026 Aplikasi Bagan Alir Dampak (AMDAL). All rights reserved.
+      </p>
+    </footer>
+    <script src="js/index.js"></script>
+  </body>
+</html>
