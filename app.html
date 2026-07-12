@@ -289,11 +289,13 @@
             <option value="'Segoe UI', sans-serif">Segoe UI</option>
           </select>
 
-          <!-- Slider Ukuran Huruf Node (Maksimal diperbarui ke 50px) -->
-          <label class="settings-label" style="margin-top: 15px"
-            >Ukuran Huruf Kotak (Node)</label
-          >
-          <div style="display: flex; align-items: center; gap: 8px">
+          <label class="settings-label" style="margin-top: 15px">Ukuran Huruf Kotak (Node)</label>
+          <div style="display: flex; align-items: center; gap: 6px">
+            <button
+              onclick="adjustNodeFontSize(-1)"
+              style="padding: 2px 6px; font-size: 12px; min-width: 28px; background: #e2e8f0; color: #334155;"
+              title="Kurangi 1px"
+            >◀</button>
             <input
               type="range"
               id="conf-node-font-size"
@@ -303,23 +305,21 @@
               value="12"
               style="flex: 1; margin-bottom: 0; cursor: pointer"
             />
-            <span
-              id="node-font-size-val"
-              style="
-                font-size: 0.85em;
-                font-weight: bold;
-                width: 35px;
-                text-align: right;
-              "
-              >12px</span
-            >
+            <button
+              onclick="adjustNodeFontSize(1)"
+              style="padding: 2px 6px; font-size: 12px; min-width: 28px; background: #e2e8f0; color: #334155;"
+              title="Tambah 1px"
+            >▶</button>
+            <span id="node-font-size-val" style="font-size: 0.85em; font-weight: bold; width: 35px; text-align: right;">12px</span>
           </div>
 
-          <!-- Slider Ukuran Huruf Label Panah (Maksimal diperbarui ke 50px) -->
-          <label class="settings-label" style="margin-top: 10px"
-            >Ukuran Huruf Label Panah</label
-          >
-          <div style="display: flex; align-items: center; gap: 8px">
+          <label class="settings-label" style="margin-top: 10px">Ukuran Huruf Label Panah</label>
+          <div style="display: flex; align-items: center; gap: 6px">
+            <button
+              onclick="adjustLabelFontSize(-1)"
+              style="padding: 2px 6px; font-size: 12px; min-width: 28px; background: #e2e8f0; color: #334155;"
+              title="Kurangi 1px"
+            >◀</button>
             <input
               type="range"
               id="conf-label-font-size"
@@ -329,16 +329,12 @@
               value="12"
               style="flex: 1; margin-bottom: 0; cursor: pointer"
             />
-            <span
-              id="label-font-size-val"
-              style="
-                font-size: 0.85em;
-                font-weight: bold;
-                width: 35px;
-                text-align: right;
-              "
-              >12px</span
-            >
+            <button
+              onclick="adjustLabelFontSize(1)"
+              style="padding: 2px 6px; font-size: 12px; min-width: 28px; background: #e2e8f0; color: #334155;"
+              title="Tambah 1px"
+            >▶</button>
+            <span id="label-font-size-val" style="font-size: 0.85em; font-weight: bold; width: 35px; text-align: right;">12px</span>
           </div>
 
           <label
