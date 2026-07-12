@@ -779,6 +779,57 @@ function adjustLabelDist(delta) {
   }
 }
 
+// Fungsi untuk menambah/mengurangi ukuran huruf Node sebesar 1px
+function adjustNodeFontSize(delta) {
+  const el = document.getElementById("conf-node-font-size");
+  const valEl = document.getElementById("node-font-size-val");
+  const wrap = document.getElementById("canvas-wrap");
+  if (!el) return;
+
+  // Simpan riwayat sebelum perubahan untuk fitur Undo/Redo
+  if (typeof pushHistory === "function") pushHistory();
+
+  // Hitung nilai baru dengan batas minimal 10px dan maksimal 50px
+  let val = parseInt(el.value, 10) + delta;
+  val = Math.max(10, Math.min(50, val));
+  
+  el.value = val;
+  if (valEl) valEl.innerText = val + "px";
+  if (wrap) wrap.style.fontSize = val + "px";
+
+  // Segarkan konektor agar panah tetap menempel sempurna saat ukuran kotak berubah
+  if (typeof refreshAllConns === "function") {
+    setTimeout(refreshAllConns, 50);
+  }
+}
+
+// Fungsi untuk menambah/mengurangi ukuran huruf Label Panah sebesar 1px
+function adjustLabelFontSize(delta) {
+  const el = document.getElementById("conf-label-font-size");
+  const valEl = document.getElementById("label-font-size-val");
+  if (!el) return;
+
+  // Simpan riwayat sebelum perubahan untuk fitur Undo/Redo
+  if (typeof pushHistory === "function") pushHistory();
+
+  // Hitung nilai baru dengan batas minimal 10px dan maksimal 50px
+  let val = parseInt(el.value, 10) + delta;
+  val = Math.max(10, Math.min(50, val));
+  
+  el.value = val;
+  if (valEl) valEl.innerText = val + "px";
+
+  // Terapkan ukuran baru ke semua label panah yang ada di kanvas
+  document.querySelectorAll(".conn-label").forEach((item) => {
+    item.style.fontSize = val + "px";
+  });
+
+  // Segarkan konektor
+  if (typeof refreshAllConns === "function") {
+    setTimeout(refreshAllConns, 50);
+  }
+}
+
 function applyLabelOrient(el, pts, off) {
   const lpos = getMidLabelPos(pts),
     ox = lpos.x + (off ? off.dx : 0),
