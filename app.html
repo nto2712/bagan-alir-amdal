@@ -16,20 +16,15 @@
       <div class="scroll-area">
         <h3 class="sidebar-title">BAGAN ALIR DAMPAK</h3>
 
-        <div class="settings-section">
-          <div class="accordion-header" onclick="toggleAccordion(this)">
-            📄 Informasi Rencana Kegiatan
+        <div class="settings-section" style="margin-bottom: 0">
+          <div
+            class="accordion-header collapsed"
+            onclick="toggleAccordion(this)"
+          >
+            💾 Save, Load & Reset
           </div>
-          <div class="accordion-content">
-            <label class="settings-label" style="margin-top: 0"
-              >Nama Kegiatan</label
-            >
-            <input
-              id="project_title"
-              value="Pengembangan Lapangan Minyak dan Gas"
-            />
-            <label class="settings-label">File Penyimpanan</label>
-            <div class="btn-file-group">
+          <div class="accordion-content collapsed">
+            <div class="btn-file-group" style="margin-top: 0">
               <button class="btn-save" onclick="saveProject()">
                 &#128190; Simpan
               </button>
@@ -51,87 +46,103 @@
               onchange="loadProject(this)"
             />
           </div>
-        </div>
+          <div class="settings-section">
+            <div
+              class="accordion-header collapsed"
+              onclick="toggleAccordion(this)"
+            >
+              📝 Rencana Kegiatan
+            </div>
+            <div class="accordion-content collapsed">
+              <label class="settings-label" style="margin-top: 0"
+                >Nama Kegiatan</label
+              >
+              <input
+                id="project_title"
+                value="Pengembangan Lapangan Minyak dan Gas"
+                style="margin-bottom: 20px"
+              />
 
-        <div class="settings-section" style="margin-bottom: 0">
-          <div
-            class="accordion-header collapsed"
-            onclick="toggleAccordion(this)"
-          >
-            📝 Input Data Dampak
-          </div>
-          <div class="accordion-content collapsed">
-            <div class="excel-import-box">
+              <div class="excel-import-box">
+                <label
+                  class="settings-label"
+                  style="color: #0369a1; margin-top: 0; font-size: 1em"
+                  >Import via Excel</label
+                >
+                <p>
+                  Format 12 Kolom: <b>Tahap</b>, <b>Kegiatan</b>, <b>Primer</b>,
+                  <b>Label_P</b>, <b>Sekunder</b>, <b>Label_S</b>,
+                  <b>Tersier</b>, <b>Label_T</b>, <b>Kuartier</b>,
+                  <b>Label_Q</b>, <b>Kuintier</b>, <b>Label_Qi</b> (Nama kolom
+                  tidak boleh berbeda dengan panduan ini)
+                </p>
+                <p>Kolom Tahap dan Kegiatan tidak boleh kosong.</p>
+                <p>
+                  Kolom label: DPH/DTPH/DTPHKP/-P/-TP/+P/+TP. (Atau lainnya
+                  sesuai keinginan pelabelan anda)
+                </p>
+                <p>Silahkan download contoh tampilan file excel:</p>
+                <a
+                  href="assets/img/contoh_excel.png"
+                  download="contoh_excel.png"
+                  style="
+                    display: inline-block;
+                    font-size: 0.85em;
+                    color: #0284c7;
+                    text-decoration: none;
+                    margin-bottom: 15px;
+                    font-weight: 600;
+                    background: #e0f2fe;
+                    padding: 6px 10px;
+                    border-radius: 4px;
+                    border: 1px solid #bae6fd;
+                    transition: all 0.2s;
+                  "
+                >
+                  ⬇️ Download Contoh Susunan Excel
+                </a>
+                <button
+                  class="btn-load"
+                  style="
+                    background: #0284c7;
+                    width: 100%;
+                    font-size: 0.9em;
+                    padding: 10px;
+                  "
+                  onclick="document.getElementById('excel-upload').click()"
+                >
+                  📄 Pilih File Excel (.xlsx)
+                </button>
+                <input
+                  type="file"
+                  id="excel-upload"
+                  accept=".xlsx,.xls,.csv"
+                  style="display: none"
+                  onchange="importExcel(this)"
+                />
+              </div>
               <label
                 class="settings-label"
-                style="color: #0369a1; margin-top: 0; font-size: 1em"
-                >Import via Excel</label
-              >
-              <p>
-                Format 12 Kolom: <b>Tahap</b>, <b>Kegiatan</b>, <b>Primer</b>,
-                <b>Label_P</b>, <b>Sekunder</b>, <b>Label_S</b>, <b>Tersier</b>,
-                <b>Label_T</b>, <b>Kuartier</b>, <b>Label_Q</b>,
-                <b>Kuintier</b>, <b>Label_Qi</b> (Nama kolom tidak boleh berbeda dengan panduan ini)
-              </p>
-              <p>Kolom Tahap dan Kegiatan tidak boleh kosong.</p>
-              <p>Kolom label: DPH/DTPH/DTPHKP/-P/-TP/+P/+TP. (Atau lainnya sesuai keinginan pelabelan anda</p>
-              <p>Silahkan download contoh tampilan file excel:</p>
-              <a
-                href="assets/img/contoh_excel.png"
-                download="contoh_excel.png"
                 style="
-                  display: inline-block;
-                  font-size: 0.85em;
-                  color: #0284c7;
-                  text-decoration: none;
+                  border-bottom: 2px solid #e2e8f0;
+                  padding-bottom: 8px;
                   margin-bottom: 15px;
-                  font-weight: 600;
-                  background: #e0f2fe;
-                  padding: 6px 10px;
-                  border-radius: 4px;
-                  border: 1px solid #bae6fd;
-                  transition: all 0.2s;
                 "
+                >Atau Input Manual:</label
               >
-                ⬇️ Download Contoh Susunan Excel
-              </a>
+              <div id="input-container"></div>
               <button
-                class="btn-load"
+                class="btn-add"
+                onclick="addT1()"
                 style="
-                  background: #0284c7;
-                  width: 100%;
-                  font-size: 0.9em;
-                  padding: 10px;
+                  background: var(--tahap);
+                  color: white;
+                  font-weight: bold;
                 "
-                onclick="document.getElementById('excel-upload').click()"
               >
-                📄 Pilih File Excel (.xlsx)
+                + Tambah Tahap Kegiatan
               </button>
-              <input
-                type="file"
-                id="excel-upload"
-                accept=".xlsx,.xls,.csv"
-                style="display: none"
-                onchange="importExcel(this)"
-              />
             </div>
-            <label
-              class="settings-label"
-              style="
-                border-bottom: 2px solid #e2e8f0;
-                padding-bottom: 8px;
-                margin-bottom: 15px;
-              "
-              >Atau Input Manual:</label
-            >
-            <div id="input-container"></div>
-            <button
-              class="btn-add"
-              onclick="addT1()"
-              style="background: var(--tahap); color: white; font-weight: bold"
-            >
-              + Tambah Tahap Kegiatan
-            </button>
           </div>
         </div>
       </div>
@@ -149,9 +160,10 @@
           <b>Klik Panah</b>: Edit jalur & label<br />
           <b>Shift+Drag Panah</b>: Geser Tanpa Snapping<br />
           <b>Ctrl+Z / Ctrl+Y</b>: Undo & Redo<br />
-          <b>Zoom in & out tampilan bagan alir</b>: Gunakan pengaturan zoom di kiri bawah kanvas<br />
-          <b>Tampilan keseluruhan aplikasi terlalu besar/kecil</b>: Ctrl + plus untuk
-          memperbesar dan Ctrl + min untuk memperkecil<br /><br />
+          <b>Zoom in & out tampilan bagan alir</b>: Gunakan pengaturan zoom di
+          kiri bawah kanvas<br />
+          <b>Tampilan keseluruhan aplikasi terlalu besar/kecil</b>: Ctrl + plus
+          untuk memperbesar dan Ctrl + min untuk memperkecil<br /><br />
           <b>Copyright:</b> nto
         </div>
       </div>
@@ -289,13 +301,23 @@
             <option value="'Segoe UI', sans-serif">Segoe UI</option>
           </select>
 
-          <label class="settings-label" style="margin-top: 15px">Ukuran Huruf Kotak (Node)</label>
+          <label class="settings-label" style="margin-top: 15px"
+            >Ukuran Huruf Kotak (Node)</label
+          >
           <div style="display: flex; align-items: center; gap: 6px">
             <button
               onclick="adjustNodeFontSize(-1)"
-              style="padding: 2px 6px; font-size: 12px; min-width: 28px; background: #e2e8f0; color: #334155;"
+              style="
+                padding: 2px 6px;
+                font-size: 12px;
+                min-width: 28px;
+                background: #e2e8f0;
+                color: #334155;
+              "
               title="Kurangi 1px"
-            >◀</button>
+            >
+              ◀
+            </button>
             <input
               type="range"
               id="conf-node-font-size"
@@ -307,19 +329,46 @@
             />
             <button
               onclick="adjustNodeFontSize(1)"
-              style="padding: 2px 6px; font-size: 12px; min-width: 28px; background: #e2e8f0; color: #334155;"
+              style="
+                padding: 2px 6px;
+                font-size: 12px;
+                min-width: 28px;
+                background: #e2e8f0;
+                color: #334155;
+              "
               title="Tambah 1px"
-            >▶</button>
-            <span id="node-font-size-val" style="font-size: 0.85em; font-weight: bold; width: 35px; text-align: right;">12px</span>
+            >
+              ▶
+            </button>
+            <span
+              id="node-font-size-val"
+              style="
+                font-size: 0.85em;
+                font-weight: bold;
+                width: 35px;
+                text-align: right;
+              "
+              >12px</span
+            >
           </div>
 
-          <label class="settings-label" style="margin-top: 10px">Ukuran Huruf Label Panah</label>
+          <label class="settings-label" style="margin-top: 10px"
+            >Ukuran Huruf Label Panah</label
+          >
           <div style="display: flex; align-items: center; gap: 6px">
             <button
               onclick="adjustLabelFontSize(-1)"
-              style="padding: 2px 6px; font-size: 12px; min-width: 28px; background: #e2e8f0; color: #334155;"
+              style="
+                padding: 2px 6px;
+                font-size: 12px;
+                min-width: 28px;
+                background: #e2e8f0;
+                color: #334155;
+              "
               title="Kurangi 1px"
-            >◀</button>
+            >
+              ◀
+            </button>
             <input
               type="range"
               id="conf-label-font-size"
@@ -331,10 +380,27 @@
             />
             <button
               onclick="adjustLabelFontSize(1)"
-              style="padding: 2px 6px; font-size: 12px; min-width: 28px; background: #e2e8f0; color: #334155;"
+              style="
+                padding: 2px 6px;
+                font-size: 12px;
+                min-width: 28px;
+                background: #e2e8f0;
+                color: #334155;
+              "
               title="Tambah 1px"
-            >▶</button>
-            <span id="label-font-size-val" style="font-size: 0.85em; font-weight: bold; width: 35px; text-align: right;">12px</span>
+            >
+              ▶
+            </button>
+            <span
+              id="label-font-size-val"
+              style="
+                font-size: 0.85em;
+                font-weight: bold;
+                width: 35px;
+                text-align: right;
+              "
+              >12px</span
+            >
           </div>
 
           <label
