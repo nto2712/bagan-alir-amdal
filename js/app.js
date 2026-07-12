@@ -1350,7 +1350,8 @@ function exportPNG() {
   const osl = wrap.scrollLeft,
     ost = wrap.scrollTop;
 
-  wrap.style.cssText = `position:absolute;top:0;left:0;width:${chartWidth}px;height:${finalHeight}px;overflow:visible;z-index:9999`;
+  // KODE BARU YANG BENAR
+wrap.style.cssText = originalWrapStyle + `; position:absolute !important; top:0 !important; left:0 !important; width:${chartWidth}px !important; height:${finalHeight}px !important; overflow:visible !important; z-index:9999 !important;`;
   inner.style.left = offsetX + "px";
   inner.style.top = offsetY + "px";
 
